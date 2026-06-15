@@ -1867,7 +1867,11 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     if (selectedView === 'paid') {
       // ── PAID VIEW ──
       // Recruiting count and Recruitment Progress are ALWAYS cumulative (exempt from time filter)
-      const recruiting = sponsoredLaunched.filter(s => s.status === 'recruiting');
+      // "Recruiting" = launched, not yet complete, and still under its enrollment target.
+      // The operations API sends no status field (studies default to 'active'), so the
+      // literal status === 'recruiting' check undercounts; derive it from progress instead.
+      const recruiting = sponsoredLaunched.filter(s =>
+        s.status !== 'complete' && (s.target || 0) > 0 && studyOnboarded(s) < s.target);
       const recruitingNames = recruiting.map(s => s.name).join(', ') || 'None';
       const progressOnboarded = sponsoredLaunched.reduce((a, s) => a + studyOnboarded(s), 0);
       const progressTarget = sponsoredLaunched.reduce((a, s) => a + s.target, 0);
@@ -1947,7 +1951,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const yr = parseInt(selectedYear);
       return s.launchYear === yr || s.crossYear || (!s.launchYear && s.status === 'coming');
     });
-    const recruiting = yearFiltered.filter(s => s.type !== 'PUBLIC' && s.status === 'recruiting');
+    // Same "recruiting" definition as the KPI: launched, not complete, under target.
+    const recruiting = yearFiltered.filter(s =>
+      s.type !== 'PUBLIC' && s.status !== 'coming' && s.status !== 'complete' &&
+      (s.target || 0) > 0 && studyOnboarded(s) < s.target);
     const flags = [];
     recruiting.forEach(s => {
       const remaining = Math.max(0, s.target - studyOnboarded(s));
@@ -2857,10 +2864,12 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       uniqueCampaigns.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
     campaignSelect.value = currentVal || 'all';
 
-    // Filter
-    const ads = filterCampaign === 'all'
+    // Filter, then sort by spend (descending) so rows display in a stable,
+    // meaningful order regardless of the source array's ordering.
+    const filtered = filterCampaign === 'all'
       ? allAds
       : allAds.filter(a => normalizeCampaign(a.campaignName) === filterCampaign);
+    const ads = filtered.slice().sort((a, b) => (b.spend || 0) - (a.spend || 0));
 
     // Render rows
     const tbody = $('#ads-tbody');
