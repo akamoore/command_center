@@ -1472,7 +1472,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
           id: localMatch?.id ?? entry.experimentId ?? nextSyntheticId++,
           experimentId: entry.experimentId ?? localMatch?.experimentId ?? null,
           name: curatedName,
-          status: normStatus(entry.status) ?? localMatch?.status ?? 'active',
+          // A curated local 'complete' is authoritative: the ops API sometimes
+          // still reports a finished study as 'live', which would wrongly count
+          // it as recruiting. Otherwise the API status wins (mapped).
+          status: localMatch?.status === 'complete' ? 'complete' : (normStatus(entry.status) ?? localMatch?.status ?? 'active'),
           // Type prefers the curated local value (keeps retired VEP tags);
           // the mapped API type is only a fallback for API-only studies.
           type: localMatch?.type ?? normType(entry.type) ?? 'RWE',
