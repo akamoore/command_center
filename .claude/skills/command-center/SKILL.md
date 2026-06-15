@@ -54,31 +54,51 @@ Slack summary.
 
 ### 1. Refresh data (replaces the dead cron jobs)
 
-This reproduces the four GitHub Actions cron workflows exactly. `scripts/refresh-stats.mjs`
-is a faithful port of `fetch-{meta-ads,appsflyer,sendgrid,recruiting}-stats.yml`
-and writes all four `data/*.json` files in the same format. Just run it:
+Two paths: token-based sources run the ported script; **Meta is pulled via the
+Meta Ads connector** (no `META_ACCESS_TOKEN` is stored).
+
+**a) Token-based sources** — `scripts/refresh-stats.mjs` is a faithful port of
+the `fetch-*-stats.yml` workflows. Run it for everything *except* meta:
 
 ```
-node scripts/refresh-stats.mjs                 # all sources
-node scripts/refresh-stats.mjs meta recruiting # or a subset
+node scripts/refresh-stats.mjs appsflyer recruiting sendgrid
 ```
 
-It needs these env vars (the **same values as the GitHub Actions secrets** — set
-them in the scheduled environment's variables, or a local `.env`):
+Required env vars (same values as the GitHub Actions secrets; set in the
+scheduled environment, or a local `.env`). A source with missing tokens skips.
 
-| File written | Env vars | Host (must be in egress allowlist) |
+| File written | Env vars | Egress host |
 |---|---|---|
-| `data/meta-ads-stats.json` | `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID` | graph.facebook.com |
 | `data/appsflyer-stats.json` | `APPSFLYER_API_TOKEN`, `APPSFLYER_APP_ID` | *.appsflyer.com |
-| `data/sendgrid-stats.json` | `SENDGRID_API_KEY` | api.sendgrid.com |
 | `data/recruiting-stats.json` | `API_KEY` | operations.reputablehealth.net |
+| `data/sendgrid-stats.json` | `SENDGRID_API_KEY` | api.sendgrid.com |
 
-A source whose tokens are missing is skipped (not an error). After it runs,
-commit the changed `data/` files (`git config user.email noreply@anthropic.com &&
-git config user.name Claude` first so the commit is verified) and deploy (§3).
+**b) Meta Ads via the connector** → `data/meta-ads-stats.json` (needs the **Meta
+Ads connector** enabled; no token required). Ad account `act_2045754205850315`
+(numeric `2045754205850315`). Use `ads_get_ad_entities`:
 
-> If `refresh-stats` surfaces a new paid Meta campaign, also wire its name into
-> the mappings (§4) so its spend attributes to the right study.
+1. **Daily** — level `account`, `time_increment: "1"`, `time_range` = last 90
+   days, fields `impressions, clicks, spend, cpc, cpm, ctr`. Build `daily[]` of
+   `{date, impressions, clicks, spend, cpc, cpm, ctr}` sorted ascending by date.
+   **Strip `$`, `,`, `%` from connector values and cast to numbers.**
+2. **Ads breakdown** — level `ad`, same `time_range`, fields `name, campaign` +
+   the metrics. Build `ads[]` of `{adName, campaignName, impressions, clicks,
+   spend, cpc, cpm, ctr}` sorted by `spend` descending. (The dashboard's
+   `getMetaAdsBreakdown()` reads this array, so every campaign must appear.)
+3. **Totals** — sum impressions/clicks/spend; then `cpc = spend/clicks`,
+   `cpm = spend/impressions*1000`, `ctr = clicks/impressions*100`.
+4. Write `data/meta-ads-stats.json` =
+   `{ updated_at: <now ISO>, period: {start, end}, totals, daily, ads }`
+   (pretty-printed, 2-space) — same shape the cron produced.
+5. Cross-check each `campaignName` against `CAMPAIGN_TO_STUDY` (§4); flag any
+   unmapped campaign in the Slack report.
+
+After (a) + (b), commit the changed `data/` files (`git config
+user.email noreply@anthropic.com && git config user.name Claude` first so the
+commit is verified) and deploy (§3).
+
+> A new paid Meta campaign that isn't in `CAMPAIGN_TO_STUDY` (§4) will have its
+> spend dropped from study rollups — wire it in when flagged.
 
 ### 2. Health check (alert on problems)
 
