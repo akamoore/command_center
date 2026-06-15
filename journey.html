@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Participant Journey — Reputable Health</title>
+  <style>
+    :root{--bg:#0a0a0a;--surface:#1a1a1a;--surface2:#141414;--border:rgba(255,255,255,0.08);--border-lime:rgba(200,230,74,0.2);--text:#fff;--text-dim:#999;--lime:#C8E64A;--lime-bg:rgba(200,230,74,0.08);--green:#34D399;--green-bg:rgba(52,211,153,0.12);--teal:#00B39F;--blue:#60A5FA;--indigo:#6C5CE7;--yellow:#FBBF24;--yellow-bg:rgba(251,191,36,0.12);--rose:#FB7185;--charcoal:#222220;--radius-md:12px;--radius-pill:100px}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);padding:20px;-webkit-font-smoothing:antialiased;background-image:linear-gradient(rgba(200,230,74,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(200,230,74,0.018) 1px,transparent 1px);background-size:52px 52px}
+    .container{max-width:1100px;margin:0 auto}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+    .header h1{font-size:clamp(1.4rem,4vw,1.8rem);font-weight:700}
+    .subtitle{font-size:13px;color:var(--text-dim);margin-top:4px}
+    .nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .nav-link{font-size:12px;color:var(--text-dim);text-decoration:none;border:1px solid var(--border);padding:6px 14px;border-radius:var(--radius-pill)}
+    .nav-link:hover{background:var(--lime-bg)}
+    .nav-link.active{color:var(--text);background:var(--lime-bg);border-color:var(--border-lime);font-weight:600}
+    .api-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding:4px 12px;border-radius:var(--radius-pill);border:1px solid var(--border)}
+    .api-badge .dot{width:8px;height:8px;border-radius:50%}
+    .api-badge.live{color:var(--lime);border-color:var(--border-lime);background:var(--lime-bg)} .api-badge.live .dot{background:var(--lime);box-shadow:0 0 10px rgba(200,230,74,0.5)}
+    .api-badge.cached{color:var(--blue);border-color:rgba(96,165,250,0.3);background:rgba(96,165,250,0.08)} .api-badge.cached .dot{background:var(--blue)}
+    .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;margin-bottom:24px}
+    .section h2{font-size:16px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+    .section h2 .ic{color:var(--lime);font-size:14px}
+    .section .hint{font-size:12px;color:var(--text-dim);margin-bottom:18px}
+    .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:4px}
+    .kpi-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;text-align:center}
+    .kpi-card .kl{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em}
+    .kpi-card .kv{font-size:26px;font-weight:700;margin:6px 0 2px}
+    .kpi-card .ks{font-size:11px;color:var(--text-dim)}
+    /* funnel */
+    .funnel-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+    .funnel-row:last-child{border-bottom:none}
+    .fl{width:150px;flex-shrink:0}
+    .fl .fn{font-size:13px;font-weight:600}
+    .fl .fd{font-size:11px;color:var(--text-dim)}
+    .fb-wrap{flex:1;min-width:0}
+    .fb{height:30px;border-radius:4px;min-width:3px;display:flex;align-items:center;padding-left:10px}
+    .fb .fbv{font-size:13px;font-weight:700;color:rgba(0,0,0,0.78)}
+    .fconv{width:130px;text-align:right;font-size:11px;color:var(--text-dim);flex-shrink:0}
+    .fconv b{color:var(--text);font-weight:700}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{background:rgba(255,255,255,0.03);color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;font-size:10px;text-align:left;padding:10px;border-bottom:1px solid var(--border)}
+    td{padding:10px;border-bottom:1px solid rgba(255,255,255,0.04)}
+    .align-right{text-align:right}
+    .src-bar{height:8px;border-radius:4px;background:var(--lime);min-width:2px}
+    .note{font-size:12px;color:var(--text-dim);background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.18);border-left:3px solid var(--blue);border-radius:8px;padding:12px 14px;margin-top:16px;line-height:1.5}
+    .footer{text-align:center;font-size:11px;color:var(--text-dim);padding:24px 0}
+    @media(max-width:768px){.fl{width:96px}.fconv{width:84px}}
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>Participant Journey</h1>
+      <div class="subtitle">Reputable Health — acquisition → enrollment funnel</div>
+    </div>
+    <div class="nav">
+      <span id="api-status"></span>
+      <a href="index.html" class="nav-link">Command Center</a>
+      <a href="journey.html" class="nav-link active">Journey</a>
+      <a href="nurture.html" class="nav-link">Email Nurture</a>
+      <a href="reporting.html" class="nav-link">Reporting</a>
+    </div>
+  </div>
+
+  <!-- Top-line totals -->
+  <div class="section">
+    <h2><span class="ic">&#9673;</span> Journey at a glance</h2>
+    <div class="hint">Each stage from the live operations API and AppsFlyer. Numbers are all-time.</div>
+    <div class="kpi-row" id="kpi-row"></div>
+  </div>
+
+  <!-- Funnel -->
+  <div class="section">
+    <h2><span class="ic">&#9673;</span> Acquisition &rarr; enrollment funnel</h2>
+    <div class="hint">Lead &rarr; App download &rarr; Joined a study &rarr; Onboarded &rarr; Completed. Conversion shows each stage relative to the one before it.</div>
+    <div id="funnel"></div>
+    <div class="note" id="funnel-note"></div>
+  </div>
+
+  <!-- By source -->
+  <div class="section">
+    <h2><span class="ic">&#9673;</span> App downloads by source</h2>
+    <div class="hint">Where installs come from (AppsFlyer).</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Source</th><th class="align-right">Installs</th><th>Share</th></tr></thead>
+        <tbody id="src-tbody"></tbody>
+      </table>
+    </div>
+    <div class="note">
+      <strong>Why source stops here:</strong> acquisition source is tracked at the install step (AppsFlyer).
+      The operations API reports <em>Joined / Onboarded / Completed</em> in aggregate (and per study), not per
+      acquisition source &mdash; so those stages aren&rsquo;t broken out by Meta / Organic / Instagram. Wiring
+      per-source attribution all the way to Completed would require the operations backend to stamp each
+      join/onboard with its original source.
+    </div>
+  </div>
+
+  <div class="footer">reputable.health &middot; Powered by Reputable</div>
+</div>
+
+<script>
+const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
+const DIRECT_API = 'https://operations.reputablehealth.net/api/recruiting';
+const PROXY = new URLSearchParams(location.search).get('proxy') || '';
+const fmt = n => (n == null ? '—' : Number(n).toLocaleString('en-US'));
+const $ = s => document.querySelector(s);
+
+async function getRecruiting() {
+  // 1) same-origin Vercel proxy
+  try { const r = await fetch('/api/recruiting?days=9999&scope=all'); if (r.ok) return { data: await r.json(), live: true }; } catch (e) {}
+  // 2) direct upstream (or ?proxy=)
+  try {
+    const url = PROXY ? `${PROXY}/api/recruiting?days=9999&scope=all` : `${DIRECT_API}?days=9999&scope=all`;
+    const r = await fetch(url, { headers: PROXY ? {} : { 'x-api-key': API_KEY } });
+    if (r.ok) return { data: await r.json(), live: true };
+  } catch (e) {}
+  // 3) cached fallback
+  try { const r = await fetch('./data/recruiting-stats.json'); if (r.ok) return { data: await r.json(), live: false }; } catch (e) {}
+  return { data: null, live: false };
+}
+const getJSON = async p => { try { const r = await fetch(p); if (r.ok) return await r.json(); } catch (e) {} return null; };
+
+function sourceGroup(name) {
+  const n = (name || '').toLowerCase();
+  if (/organic/.test(n)) return 'Organic';
+  if (/instagram/.test(n)) return 'Instagram';
+  if (/facebook|meta/.test(n)) return 'Meta Ads';
+  if (/invite|partner|referr/.test(n)) return 'Partner / Referral';
+  return 'Other';
+}
+
+async function render() {
+  const { data: rec, live } = await getRecruiting();
+  const af = await getJSON('./data/appsflyer-stats.json');
+
+  // status badge
+  const badge = $('#api-status');
+  badge.className = 'api-badge ' + (live ? 'live' : 'cached');
+  badge.innerHTML = '<span class="dot"></span>' + (live ? 'Live API' : 'Cached API');
+
+  const ob = (rec && rec.onboarding) || {};
+  const funnel = (rec && rec.funnel) || {};
+  const byStudy = ob.byStudy || [];
+  const sum = (arr, k) => arr.reduce((a, s) => a + (Number(s[k]) || 0), 0);
+
+  // Stage values — prefer the most specific real field, fall back gracefully.
+  const leads      = sum(byStudy, 'leads') || funnel.adClicks || ob.newSignups || 0;
+  const downloads  = (af && af.totals && af.totals.installs) || funnel.appInstalls || 0;
+  const joined     = ob.joinedTotal || sum(byStudy, 'joined') || 0;
+  const onboarded  = ob.total || funnel.onboarded || sum(byStudy, 'count') || 0;
+  const completed  = sum(byStudy, 'completed') || 0;
+
+  const stages = [
+    { label: 'Lead',         desc: 'expressed interest', value: leads,     color: '#C8E64A' },
+    { label: 'App download', desc: 'installed the app',  value: downloads, color: '#74B9FF' },
+    { label: 'Joined study', desc: 'enrolled',           value: joined,    color: '#00B39F' },
+    { label: 'Onboarded',    desc: 'started tracking',   value: onboarded, color: '#6C5CE7' },
+    { label: 'Completed',    desc: 'finished a study',   value: completed, color: '#34D399' },
+  ];
+
+  // KPI row
+  $('#kpi-row').innerHTML = stages.map(s =>
+    `<div class="kpi-card"><div class="kl">${s.label}</div><div class="kv" style="color:${s.color}">${fmt(s.value)}</div><div class="ks">${s.desc}</div></div>`
+  ).join('');
+
+  // Funnel bars (width relative to the largest stage)
+  const max = Math.max(1, ...stages.map(s => s.value));
+  $('#funnel').innerHTML = stages.map((s, i) => {
+    const w = Math.max(2, (s.value / max) * 100);
+    const prev = i === 0 ? null : stages[i - 1].value;
+    const conv = prev ? (prev > 0 ? Math.round((s.value / prev) * 100) : 0) : null;
+    return `<div class="funnel-row">
+      <div class="fl"><div class="fn">${s.label}</div><div class="fd">${s.desc}</div></div>
+      <div class="fb-wrap"><div class="fb" style="width:${w}%;background:${s.color}"><span class="fbv">${fmt(s.value)}</span></div></div>
+      <div class="fconv">${conv == null ? 'top of funnel' : `<b>${conv}%</b> of ${stages[i-1].label}`}</div>
+    </div>`;
+  }).join('');
+
+  $('#funnel-note').innerHTML = 'Stages are sourced from different systems (AppsFlyer for installs, the operations API for leads/joins/onboards), so they’re not a strict subset of one another — read each as a stage count plus its step-over-step conversion.';
+
+  // By source (app downloads)
+  const tbody = $('#src-tbody');
+  const bySource = (af && af.bySource) || [];
+  if (!bySource.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-dim)">No AppsFlyer source data available.</td></tr>';
+    return;
+  }
+  const grouped = {};
+  bySource.forEach(s => {
+    const g = sourceGroup(s.source);
+    grouped[g] = (grouped[g] || 0) + (Number(s.installs) || 0);
+  });
+  const rows = Object.entries(grouped).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const total = rows.reduce((a, [, v]) => a + v, 0) || 1;
+  tbody.innerHTML = rows.map(([name, v]) => {
+    const pct = (v / total) * 100;
+    return `<tr>
+      <td>${name}</td>
+      <td class="align-right">${fmt(v)}</td>
+      <td><div style="display:flex;align-items:center;gap:10px"><div class="src-bar" style="width:${Math.max(2, pct)}%"></div><span style="font-size:11px;color:var(--text-dim)">${pct.toFixed(0)}%</span></div></td>
+    </tr>`;
+  }).join('');
+}
+render();
+</script>
+</body>
+</html>
