@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-03-29T15:58:52.250Z",
+  "updated_at": "2026-06-15T15:41:01.000Z",
   "period": {
     "start": "2025-12-29",
     "end": "2026-03-29"
@@ -926,6 +926,16 @@
       "cpc": 0.916667,
       "cpm": 50.925926,
       "ctr": 5.555556
+    },
+    {
+      "adName": "Rehydration Recovery",
+      "campaignName": "Rehydration Recovery",
+      "impressions": 59604,
+      "clicks": 1224,
+      "spend": 1580.79,
+      "cpc": 1.291496,
+      "cpm": 26.521711,
+      "ctr": 2.053554
     }
   ]
 }
