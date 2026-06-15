@@ -2677,7 +2677,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   ];
 
   function getCPO(s) {
-    return (s.spend > 0 && s.onboarded > 0) ? s.spend / s.onboarded : null;
+    // Use enriched (API-preferred) spend/onboarded so studies whose spend
+    // arrives via apiSpend (raw s.spend stays 0) still compute a CPO.
+    const spend = studySpend(s), onb = studyOnboarded(s);
+    return (spend > 0 && onb > 0) ? spend / onb : null;
   }
 
   function getSortValue(s, col) {
@@ -2694,8 +2697,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     }
     if (col === 'manualQueue') return s.manualQueue ? 0 : 1;
     if (col === 'outlier') return s.outlier ? 0 : 1;
-    if (col === 'has_spend') return s.spend > 0 ? 0 : 1;
-    if (col === 'completion_pct') return s.target > 0 ? (s.onboarded || 0) / s.target : -1;
+    if (col === 'has_spend') return studySpend(s) > 0 ? 0 : 1;
+    if (col === 'completion_pct') return s.target > 0 ? (studyOnboarded(s) || 0) / s.target : -1;
     if (col === 'size_category') {
       const order = { pilot: 0, medium: 1, large: 2 };
       return order[s.size_category] ?? 3;
@@ -2728,7 +2731,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     }
     if (filterSize !== 'all') studies = studies.filter(s => s.size_category === filterSize);
     if (filterAdSpend !== 'all') {
-      studies = studies.filter(s => filterAdSpend === 'has' ? s.spend > 0 : s.spend === 0);
+      studies = studies.filter(s => filterAdSpend === 'has' ? studySpend(s) > 0 : studySpend(s) === 0);
     }
     if (filterOutlier !== 'all') {
       studies = studies.filter(s => filterOutlier === 'yes' ? s.outlier : !s.outlier);
@@ -2778,7 +2781,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         <td class="align-right">${fmtInt(s.target)}</td>
         <td class="align-right">${compPct != null ? `<span style="color:${compColor};font-weight:600">${compPct.toFixed(0)}%</span>` : '—'}</td>
         <td class="align-right">${cpo != null ? fmt(cpo) : '—'}</td>
-        <td style="text-align:center">${s.spend > 0 ? '<span style="color:var(--lime)">Yes</span>' : '<span style="color:var(--text-dim)">No</span>'}</td>
+        <td style="text-align:center">${displaySpend > 0 ? '<span style="color:var(--lime)">Yes</span>' : '<span style="color:var(--text-dim)">No</span>'}</td>
         <td>${s.wearable || '—'}</td>
         <td class="align-right">${s.days != null ? s.days : '—'}</td>
         <td style="text-align:center">${s.manualQueue ? '<span style="color:var(--yellow)">Yes</span>' : '<span style="color:var(--text-dim)">No</span>'}</td>
@@ -3731,16 +3734,19 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     if (filterStatus !== 'all') studies = studies.filter(s => s.status === filterStatus);
     if (filterType !== 'all') studies = studies.filter(s => s.type === filterType);
     if (filterSize !== 'all') studies = studies.filter(s => s.size_category === filterSize);
-    if (filterAdSpend !== 'all') studies = studies.filter(s => filterAdSpend === 'has' ? s.spend > 0 : s.spend === 0);
+    if (filterAdSpend !== 'all') studies = studies.filter(s => filterAdSpend === 'has' ? studySpend(s) > 0 : studySpend(s) === 0);
     if (filterManual !== 'all') studies = studies.filter(s => filterManual === 'yes' ? s.manualQueue : !s.manualQueue);
     if (filterOutlier !== 'all') studies = studies.filter(s => filterOutlier === 'yes' ? s.outlier : !s.outlier);
 
     const headers = ['ID','Name','Type','Size','Status','Launch','End','Spend','Leads','Joined','Onboarded','Target','Completion%','CPO','Source','Wearable','Days','Manual Steps','Outlier','Outlier Reason','Complexity Factors'];
     const rows = studies.map(s => {
-      const spend = s.apiSpend != null ? s.apiSpend : s.spend;
-      const cpo = (spend > 0 && s.onboarded > 0) ? (spend / s.onboarded).toFixed(2) : '';
-      const compPct = s.target > 0 ? ((s.onboarded || 0) / s.target * 100).toFixed(1) : '';
-      return [s.id, '"' + (s.name || '').replace(/"/g, '""') + '"', s.type, s.size_category, s.status, s.launchDate || '', s.endDate || '', spend.toFixed(2), s.leads || '', s.joined || '', s.onboarded || '', s.target, compPct, cpo, s.recruitment_source || '', s.wearable || '', s.days || '', s.has_manual_steps ? 'Yes' : 'No', s.outlier ? 'Yes' : 'No', '"' + (s.outlier_reason || '').replace(/"/g, '""') + '"', '"' + (s.complexity_factors || []).join(', ') + '"'];
+      // Mirror the on-screen table: prefer API-enriched spend/joins/onboarded.
+      const spend = studySpend(s);
+      const onboarded = studyOnboarded(s);
+      const joined = studyJoined(s);
+      const cpo = (spend > 0 && onboarded > 0) ? (spend / onboarded).toFixed(2) : '';
+      const compPct = s.target > 0 ? ((onboarded || 0) / s.target * 100).toFixed(1) : '';
+      return [s.id, '"' + (s.name || '').replace(/"/g, '""') + '"', s.type, s.size_category, s.status, s.launchDate || '', s.endDate || '', spend.toFixed(2), s.leads || '', joined || '', onboarded || '', s.target, compPct, cpo, s.recruitment_source || '', s.wearable || '', s.days || '', s.has_manual_steps ? 'Yes' : 'No', s.outlier ? 'Yes' : 'No', '"' + (s.outlier_reason || '').replace(/"/g, '""') + '"', '"' + (s.complexity_factors || []).join(', ') + '"'];
     });
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
