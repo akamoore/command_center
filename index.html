@@ -1415,6 +1415,34 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const entryName = e => e.studyName || e.experimentTitle || e.name || '';
       const MANUAL_FACTORS = ['screening_call', 'pre_study_lab_work', 'external_survey'];
 
+      // ── Normalize ops API vocabulary → dashboard vocabulary ──
+      // The operations API speaks a different taxonomy than the dashboard
+      // (status: live/coming_soon; type: Clinical/Public/Self-Serve;
+      // wearable: lowercase token arrays; days: "N days" strings). Translate
+      // them so badges, filters, and sorts (coded for the dashboard's enums)
+      // work. VEP is retired on the API side but kept for curated studies, so
+      // type prefers the curated local value and only maps the API value for
+      // studies with no local record.
+      const API_STATUS_MAP = { live: 'active', coming_soon: 'coming' };
+      const API_TYPE_MAP = { Clinical: 'RCT', Public: 'PUBLIC', 'Self-Serve': 'PUBLIC' };
+      const WEARABLE_MAP = {
+        oura: 'Oura', whoop_v2: 'Whoop', whoop: 'Whoop', fitbit: 'Fitbit',
+        garmin: 'Garmin', apple_health_kit: 'Apple Watch', apple_watch: 'Apple Watch',
+      };
+      const normStatus = v => (v && API_STATUS_MAP[v]) || v || null;
+      const normType = v => (v && API_TYPE_MAP[v]) || v || null;
+      const normWearable = v => {
+        if (v == null) return null;
+        const toName = t => WEARABLE_MAP[t] || (typeof t === 'string' ? t : '');
+        const out = Array.isArray(v) ? v.map(toName).filter(Boolean).join(' / ') : toName(v);
+        return out || null;
+      };
+      const parseDays = v => {
+        if (typeof v === 'number') return v;
+        if (typeof v === 'string') { const m = v.match(/\d+/); return m ? parseInt(m[0], 10) : null; }
+        return null;
+      };
+
       let nextSyntheticId = (STUDIES.reduce((m, s) => Math.max(m, s.id || 0), 0) || 0) + 1000;
       const matchedLocalIds = new Set();
 
@@ -1448,14 +1476,16 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
           id: localMatch?.id ?? entry.experimentId ?? nextSyntheticId++,
           experimentId: entry.experimentId ?? localMatch?.experimentId ?? null,
           name: curatedName,
-          status: entry.status ?? localMatch?.status ?? 'active',
-          type: entry.type ?? localMatch?.type ?? 'RWE',
+          status: normStatus(entry.status) ?? localMatch?.status ?? 'active',
+          // Type prefers the curated local value (keeps retired VEP tags);
+          // the mapped API type is only a fallback for API-only studies.
+          type: localMatch?.type ?? normType(entry.type) ?? 'RWE',
           target: entry.target ?? localMatch?.target ?? 0,
           joined: joinsVal ?? localMatch?.joined ?? null,
           leads: entry.leads ?? localMatch?.leads ?? null,
           onboarded: onbVal ?? localMatch?.onboarded ?? 0,
-          wearable: entry.wearable ?? localMatch?.wearable ?? null,
-          days: entry.days ?? localMatch?.days ?? null,
+          wearable: normWearable(entry.wearable) ?? localMatch?.wearable ?? null,
+          days: parseDays(entry.days) ?? localMatch?.days ?? null,
           launchDate: entry.launchDate ?? localMatch?.launchDate ?? null,
           endDate: entry.endDate ?? localMatch?.endDate ?? null,
           // Surface raw API values for helpers that prefer them
