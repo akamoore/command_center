@@ -54,24 +54,31 @@ Slack summary.
 
 ### 1. Refresh data (replaces the dead cron jobs)
 
-Goal: bring the `data/*.json` files current, then deploy.
+This reproduces the four GitHub Actions cron workflows exactly. `scripts/refresh-stats.mjs`
+is a faithful port of `fetch-{meta-ads,appsflyer,sendgrid,recruiting}-stats.yml`
+and writes all four `data/*.json` files in the same format. Just run it:
 
-1. **Meta Ads** (`data/meta-ads-stats.json`): via the Meta Ads connector, pull
-   account-level daily `spend, clicks, impressions, cpc` for the period
-   (since `2026-01-01`) and per-campaign `ads` breakdown. Preserve the file
-   shape: `{ updated_at, period, totals, daily:[...], ads:[{campaignName, adName,
-   impressions, clicks, spend, cpc, cpm, ctr}] }`. The dashboard's
-   `getMetaAdsBreakdown()` prefers this file's `ads` array, so **every paid
-   campaign must appear here** (see §4). Alternatively run
-   `node fetch-chart-data.mjs` if `META_ACCESS_TOKEN`/`APPSFLYER_API_TOKEN` are
-   set in `.env`.
-2. **Recruiting** (`data/recruiting-stats.json`): GET the ops API
-   (`?days=90&scope=all`) and save the JSON. Requires egress + `API_KEY`.
-3. **AppsFlyer / SendGrid**: refresh from their APIs if tokens are available;
-   otherwise note they were skipped.
-4. Bump each file's `updated_at`. Commit changed `data/` files
-   (`git config user.email noreply@anthropic.com && user.name Claude` first so
-   the commit is verified), push to a branch, and deploy (§3).
+```
+node scripts/refresh-stats.mjs                 # all sources
+node scripts/refresh-stats.mjs meta recruiting # or a subset
+```
+
+It needs these env vars (the **same values as the GitHub Actions secrets** — set
+them in the scheduled environment's variables, or a local `.env`):
+
+| File written | Env vars | Host (must be in egress allowlist) |
+|---|---|---|
+| `data/meta-ads-stats.json` | `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID` | graph.facebook.com |
+| `data/appsflyer-stats.json` | `APPSFLYER_API_TOKEN`, `APPSFLYER_APP_ID` | *.appsflyer.com |
+| `data/sendgrid-stats.json` | `SENDGRID_API_KEY` | api.sendgrid.com |
+| `data/recruiting-stats.json` | `API_KEY` | operations.reputablehealth.net |
+
+A source whose tokens are missing is skipped (not an error). After it runs,
+commit the changed `data/` files (`git config user.email noreply@anthropic.com &&
+git config user.name Claude` first so the commit is verified) and deploy (§3).
+
+> If `refresh-stats` surfaces a new paid Meta campaign, also wire its name into
+> the mappings (§4) so its spend attributes to the right study.
 
 ### 2. Health check (alert on problems)
 
