@@ -103,6 +103,24 @@ Requests:
 - Match these field names where practical so the data drops straight into the
   existing Public Studies tab with minimal rework.
 
+### 6a. Extra fields needed for a per-study **health** view
+
+We want to show how each public study is doing over time (pace, tenure,
+momentum). The current snapshot can't support this — please also include, per
+public study:
+
+- **`launchDate` / `catalogAddedDate`** — when it went live / was added to the
+  catalog → powers **time on catalog**.
+- **A monthly time series of joins (and onboards)** — e.g.
+  `joinsByMonth: [{ "month": "2026-04", "joins": 42, "onboarded": 30 }, …]` →
+  powers **join/onboard pace**, **avg participants per month**, and trend
+  (accelerating / slowing / stalled).
+- (Derivable from the above, but explicit is fine too) **current run-rate**
+  (joins in the last 30 days) so we can flag stale / high-momentum studies.
+
+With `launchDate` + `joinsByMonth`, the dashboard can compute: time on catalog,
+avg joins/month, last-30-day pace, and an up/down momentum indicator per study.
+
 ---
 
 ### Why it matters
