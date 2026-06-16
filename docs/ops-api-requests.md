@@ -65,6 +65,44 @@ The dashboard normalizes these client-side, so this is optional cleanup:
 - `status`: API uses `live` / `coming_soon`; dashboard uses `active` / `coming` / `complete` / `recruiting`.
 - `type`: API uses `Clinical` / `Public` / `Self-Serve`; dashboard uses `RCT` / `RWE` / `VEP` / `PUBLIC`.
 
+## 6. Real-time feed for the **Public Studies Analytics** tab  ⭐
+
+The dashboard's **Public Studies** tab is currently powered by a **manual
+participant export** ("Manpreet's May 15, 2026 export · all-time public-challenge
+dataset") — so it's a static snapshot that goes stale (it's already a month old).
+We'd like an API / feed so these numbers update in **real time**, replacing the
+manual upload.
+
+Per **public study / challenge**, we use:
+
+```jsonc
+{
+  "id": 492,
+  "name": "The 4-7-8 Effect",
+  "category": "Sleep",          // grouping (Sleep, Energy, etc.)
+  "participants": 180,
+  "new": 36,
+  "returning": 144,
+  "completed": 105,
+  "completionRate": 58.33,      // %
+  "avgDaysTagged": 4.2,
+  "avgDaysMissed": 0.6
+}
+```
+
+From which the tab derives the headline cards: **total participants**,
+**studies completed** (of total), **avg completion rate** (study-weighted), and
+**new vs returning** split — plus the per-study completion-rate chart.
+
+Requests:
+- A **real-time endpoint** (or include public challenges in the existing
+  recruiting feed, clearly flagged as public) returning the per-study object above.
+- **Any additional demographic breakdowns** you can expose for public-challenge
+  participants — e.g. age range, gender, location/region — would be valuable here;
+  the current manual export doesn't include them.
+- Match these field names where practical so the data drops straight into the
+  existing Public Studies tab with minimal rework.
+
 ---
 
 ### Why it matters
