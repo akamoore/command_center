@@ -719,7 +719,7 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
         <h3 style="margin:0;color:var(--text-dim);">Meta Ads Breakdown</h3>
         <div class="table-controls">
           <select id="filter-campaign">
-            <option value="all">All Campaigns</option>
+            <option value="all">All Studies</option>
           </select>
         </div>
       </div>
@@ -727,7 +727,7 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
         <table>
           <thead>
             <tr>
-              <th>Campaign</th><th>Ad Name</th>
+              <th>Study</th><th>Active</th>
               <th class="align-right">Impressions</th><th class="align-right">Clicks</th>
               <th class="align-right">Spend</th><th class="align-right">CTR</th>
               <th class="align-right">CPC</th><th class="align-right">CPM</th>
@@ -2877,6 +2877,36 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   function normalizeCampaign(name) { return CAMPAIGN_NAME_MAP[name?.toLowerCase()] || name; }
   function normalizeAd(name) { return AD_NAME_MAP[name?.toLowerCase()] || name; }
 
+  // Group Meta campaigns into the study they belong to (one breakdown row per study)
+  const CAMPAIGN_TO_STUDY_LABEL = {
+    'melatonin sleep study': 'Melatonin Sleep Study (Somato)',
+    'somato sleep study': 'Melatonin Sleep Study (Somato)',
+    'pain relief: proleevamax': 'Pain Relief: ProleevaMax',
+    'proleevamax': 'Pain Relief: ProleevaMax',
+    'proleeva - 2': 'Pain Relief: ProleevaMax',
+    'proleeva - 2 - leads - instant forms': 'Pain Relief: ProleevaMax',
+    'new proleeva campaign': 'Pain Relief: ProleevaMax',
+    'sleep peptide': 'Peptide Supplement: Sleep & Recovery',
+    'rehydration recovery': 'Rehydration Recovery',
+    'berkeley life': 'Nitrate Supplementation (Berkeley Life)',
+    "rootless women's health": "Rootless & Women's Health",
+    'coffee + oura ring study': 'Enhanced Brew — Coffee Study (Nov 2025)',
+    'enhanced brew formula': 'Enhanced Brew Formula — RCT (Jun 2025)',
+    'caffeine study': 'Enhanced Brew Formula — RCT (Jun 2025)',
+    'quantum upgrade': "Quantum Upgrade & Women's Health",
+  };
+  const studyLabel = name => CAMPAIGN_TO_STUDY_LABEL[(name || '').toLowerCase()] || name || '—';
+  const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fmtMonth = ym => { if (!ym) return ''; const [y, m] = ym.split('-'); return `${MONTH_ABBR[+m - 1]} ${y}`; };
+  function fmtMonthRange(first, last) {
+    first = first || last; last = last || first;
+    if (!first) return '—';
+    if (first === last) return fmtMonth(first);
+    const [fy] = first.split('-'), [ly] = last.split('-');
+    if (fy === ly) { const [, fm] = first.split('-'); return `${MONTH_ABBR[+fm - 1]} – ${fmtMonth(last)}`; }
+    return `${fmtMonth(first)} – ${fmtMonth(last)}`;
+  }
+
   let filterCampaign = 'all';
 
   function renderAds() {
@@ -2888,52 +2918,65 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     }
     section.style.display = '';
 
-    // Populate campaign filter dropdown with normalized names
-    const campaignSelect = $('#filter-campaign');
-    const uniqueCampaigns = [...new Set(allAds.map(a => normalizeCampaign(a.campaignName)))].sort();
-    const currentVal = campaignSelect.value;
-    campaignSelect.innerHTML = '<option value="all">All Campaigns</option>' +
-      uniqueCampaigns.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
-    campaignSelect.value = currentVal || 'all';
+    // Merge campaigns into one row per study, summing metrics and spanning months.
+    const groups = {};
+    allAds.forEach(a => {
+      const label = studyLabel(a.campaignName);
+      const g = groups[label] || (groups[label] = { study: label, impressions: 0, clicks: 0, spend: 0, first: null, last: null });
+      g.impressions += a.impressions || 0;
+      g.clicks += a.clicks || 0;
+      g.spend += a.spend || 0;
+      if (a.firstMonth && (!g.first || a.firstMonth < g.first)) g.first = a.firstMonth;
+      if (a.lastMonth && (!g.last || a.lastMonth > g.last)) g.last = a.lastMonth;
+    });
+    let rows = Object.values(groups).map(g => ({
+      study: g.study,
+      dates: fmtMonthRange(g.first, g.last),
+      impressions: g.impressions,
+      clicks: g.clicks,
+      spend: g.spend,
+      ctr: g.impressions > 0 ? g.clicks / g.impressions * 100 : 0,
+      cpc: g.clicks > 0 ? g.spend / g.clicks : 0,
+      cpm: g.impressions > 0 ? g.spend / g.impressions * 1000 : 0,
+    }));
 
-    // Filter, then sort by spend (descending) so rows display in a stable,
-    // meaningful order regardless of the source array's ordering.
-    const filtered = filterCampaign === 'all'
-      ? allAds
-      : allAds.filter(a => normalizeCampaign(a.campaignName) === filterCampaign);
-    const ads = filtered.slice().sort((a, b) => (b.spend || 0) - (a.spend || 0));
+    // Populate the study filter dropdown
+    const select = $('#filter-campaign');
+    const uniqueStudies = [...new Set(rows.map(r => r.study))].sort();
+    const currentVal = select.value;
+    select.innerHTML = '<option value="all">All Studies</option>' +
+      uniqueStudies.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    select.value = currentVal || 'all';
 
-    // Render rows
+    if (filterCampaign !== 'all') rows = rows.filter(r => r.study === filterCampaign);
+    rows.sort((a, b) => b.spend - a.spend);
+
     const tbody = $('#ads-tbody');
-    tbody.innerHTML = ads.map(a => `<tr>
-      <td>${esc(normalizeCampaign(a.campaignName) || '—')}</td>
-      <td>${esc(normalizeAd(a.adName) || '—')}</td>
-      <td class="align-right">${fmtInt(a.impressions)}</td>
-      <td class="align-right">${fmtInt(a.clicks)}</td>
-      <td class="align-right">${fmt(a.spend)}</td>
-      <td class="align-right">${fmtPct(a.ctr)}</td>
-      <td class="align-right">${fmt(a.cpc)}</td>
-      <td class="align-right">${fmt(a.cpm)}</td>
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${esc(r.study)}</td>
+      <td>${esc(r.dates)}</td>
+      <td class="align-right">${fmtInt(r.impressions)}</td>
+      <td class="align-right">${fmtInt(r.clicks)}</td>
+      <td class="align-right">${fmt(r.spend)}</td>
+      <td class="align-right">${fmtPct(r.ctr)}</td>
+      <td class="align-right">${fmt(r.cpc)}</td>
+      <td class="align-right">${fmt(r.cpm)}</td>
     </tr>`).join('');
 
-    // Totals row
-    const totImpressions = ads.reduce((a, d) => a + (d.impressions || 0), 0);
-    const totClicks = ads.reduce((a, d) => a + (d.clicks || 0), 0);
-    const totSpend = ads.reduce((a, d) => a + (d.spend || 0), 0);
-    const totCTR = totImpressions > 0 ? (totClicks / totImpressions * 100) : 0;
-    const totCPC = totClicks > 0 ? totSpend / totClicks : 0;
-    const totCPM = totImpressions > 0 ? totSpend / totImpressions * 1000 : 0;
+    const totImpressions = rows.reduce((a, r) => a + r.impressions, 0);
+    const totClicks = rows.reduce((a, r) => a + r.clicks, 0);
+    const totSpend = rows.reduce((a, r) => a + r.spend, 0);
 
     const tfoot = $('#ads-tfoot');
     tfoot.innerHTML = `<tr style="font-weight:700;">
-      <td>${filterCampaign === 'all' ? ads.length + ' ads' : esc(filterCampaign)}</td>
+      <td>${filterCampaign === 'all' ? rows.length + ' studies' : esc(filterCampaign)}</td>
       <td>Total</td>
       <td class="align-right">${fmtInt(totImpressions)}</td>
       <td class="align-right">${fmtInt(totClicks)}</td>
       <td class="align-right">${fmt(totSpend)}</td>
-      <td class="align-right">${fmtPct(totCTR)}</td>
-      <td class="align-right">${fmt(totCPC)}</td>
-      <td class="align-right">${fmt(totCPM)}</td>
+      <td class="align-right">${fmtPct(totImpressions > 0 ? totClicks / totImpressions * 100 : 0)}</td>
+      <td class="align-right">${fmt(totClicks > 0 ? totSpend / totClicks : 0)}</td>
+      <td class="align-right">${fmt(totImpressions > 0 ? totSpend / totImpressions * 1000 : 0)}</td>
     </tr>`;
   }
 
