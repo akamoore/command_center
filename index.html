@@ -725,14 +725,7 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
       </div>
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>Study</th><th>Active</th>
-              <th class="align-right">Impressions</th><th class="align-right">Clicks</th>
-              <th class="align-right">Spend</th><th class="align-right">CTR</th>
-              <th class="align-right">CPC</th><th class="align-right">CPM</th>
-            </tr>
-          </thead>
+          <thead><tr id="ads-thead"></tr></thead>
           <tbody id="ads-tbody"></tbody>
           <tfoot id="ads-tfoot"></tfoot>
         </table>
@@ -2907,7 +2900,19 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return `${fmtMonth(first)} – ${fmtMonth(last)}`;
   }
 
+  const ADS_COLUMNS = [
+    { key: 'study', label: 'Study', align: 'left' },
+    { key: 'dates', label: 'Active', align: 'left' },
+    { key: 'impressions', label: 'Impressions', align: 'right' },
+    { key: 'clicks', label: 'Clicks', align: 'right' },
+    { key: 'spend', label: 'Spend', align: 'right' },
+    { key: 'ctr', label: 'CTR', align: 'right' },
+    { key: 'cpc', label: 'CPC', align: 'right' },
+    { key: 'cpm', label: 'CPM', align: 'right' },
+  ];
   let filterCampaign = 'all';
+  let adsSortCol = 'spend';
+  let adsSortDir = 'desc';
 
   function renderAds() {
     const allAds = dataService.getMetaAdsBreakdown();
@@ -2932,6 +2937,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     let rows = Object.values(groups).map(g => ({
       study: g.study,
       dates: fmtMonthRange(g.first, g.last),
+      _first: g.first || '',
       impressions: g.impressions,
       clicks: g.clicks,
       spend: g.spend,
@@ -2949,7 +2955,27 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     select.value = currentVal || 'all';
 
     if (filterCampaign !== 'all') rows = rows.filter(r => r.study === filterCampaign);
-    rows.sort((a, b) => b.spend - a.spend);
+
+    // Sortable header
+    const thead = $('#ads-thead');
+    thead.innerHTML = ADS_COLUMNS.map(c => {
+      const sorted = adsSortCol === c.key;
+      const arrow = sorted ? (adsSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+      const cls = [c.align === 'right' ? 'align-right' : '', sorted ? 'sorted' : ''].filter(Boolean).join(' ');
+      return `<th class="${cls}" data-col="${c.key}" style="cursor:pointer">${c.label}<span class="sort-arrow">${arrow}</span></th>`;
+    }).join('');
+
+    // Sort by the active column ('dates' sorts chronologically by first month)
+    const dir = adsSortDir === 'asc' ? 1 : -1;
+    rows.sort((a, b) => {
+      let av, bv;
+      if (adsSortCol === 'study') { av = a.study.toLowerCase(); bv = b.study.toLowerCase(); }
+      else if (adsSortCol === 'dates') { av = a._first; bv = b._first; }
+      else { av = a[adsSortCol]; bv = b[adsSortCol]; }
+      if (av < bv) return -1 * dir;
+      if (av > bv) return dir;
+      return 0;
+    });
 
     const tbody = $('#ads-tbody');
     tbody.innerHTML = rows.map(r => `<tr>
@@ -3758,6 +3784,22 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       sortDir = 'asc';
     }
     renderStudiesTable();
+  });
+
+  // Meta Ads breakdown column sort
+  document.addEventListener('click', e => {
+    const th = e.target.closest('#ads-thead th');
+    if (!th) return;
+    const col = th.dataset.col;
+    if (!ADS_COLUMNS.some(c => c.key === col)) return;
+    if (adsSortCol === col) {
+      adsSortDir = adsSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      adsSortCol = col;
+      // numeric columns default to descending (biggest first); text to ascending
+      adsSortDir = (col === 'study' || col === 'dates') ? 'asc' : 'desc';
+    }
+    renderAds();
   });
 
   // Community / Public Studies table column sort
