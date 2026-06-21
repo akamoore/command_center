@@ -110,6 +110,14 @@ const PROXY = new URLSearchParams(location.search).get('proxy') || '';
 const fmt = n => (n == null ? '—' : Number(n).toLocaleString('en-US'));
 const $ = s => document.querySelector(s);
 
+// Test / QA studies that must never appear in reports (lowercase substring
+// match; specific enough not to hit the real, month-tagged studies).
+const EXCLUDED_NAMES = ['nuchido 2', 'march 12 test', 'a coffee study', 'enhanced brew formula (ebf)'];
+const isExcludedStudyName = name => {
+  const n = (name || '').toLowerCase();
+  return EXCLUDED_NAMES.some(ex => n.includes(ex));
+};
+
 async function getRecruiting() {
   // 1) same-origin Vercel proxy
   try { const r = await fetch('/api/recruiting?days=9999&scope=all'); if (r.ok) return { data: await r.json(), live: true }; } catch (e) {}
@@ -145,7 +153,7 @@ async function render() {
 
   const ob = (rec && rec.onboarding) || {};
   const funnel = (rec && rec.funnel) || {};
-  const byStudy = ob.byStudy || [];
+  const byStudy = (ob.byStudy || []).filter(s => !isExcludedStudyName(s.experimentTitle || s.studyName || s.name || ''));
   const sum = (arr, k) => arr.reduce((a, s) => a + (Number(s[k]) || 0), 0);
 
   // Stage values — prefer the most specific real field, fall back gracefully.

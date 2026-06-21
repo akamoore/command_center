@@ -2022,6 +2022,21 @@
   var API_URL = PROXY_BASE ? PROXY_BASE + '/api/recruiting' : 'https://operations.reputablehealth.net/api/recruiting';
   var API_KEY = 'colleague:X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
 
+  // Test / QA studies that must never appear in reports (matched lowercase,
+  // substring). Each substring is specific enough that it can't hit the real,
+  // month-tagged studies it sits beside (e.g. "Enhanced Brew — Coffee Study
+  // (Nov 2025)" does not contain "a coffee study").
+  var EXCLUDED_NAMES = [
+    'nuchido 2',                   // Sleep & Stress Nuchido 2 (test, clinic)
+    'march 12 test',               // Whoop - March 12 Test
+    'a coffee study',              // Enhanced Brew - A Coffee Study
+    'enhanced brew formula (ebf)'  // Enhanced Brew Formula (EBF) RCT
+  ];
+  function isExcludedStudyName(name) {
+    var n = (name || '').toLowerCase();
+    return EXCLUDED_NAMES.some(function(ex) { return n.indexOf(ex) !== -1; });
+  }
+
   function fmtK(n) {
     if (n == null) return '—';
     if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
@@ -2036,6 +2051,14 @@
   }
 
   function renderLiveData(data) {
+    // Strip test / excluded studies from the live feed up front so they can't
+    // surface in the per-study tables, the public/sponsored split, or the
+    // per-study charts (all read data.onboarding.byStudy after this point).
+    if (data && data.onboarding && Array.isArray(data.onboarding.byStudy)) {
+      data.onboarding.byStudy = data.onboarding.byStudy.filter(function(st) {
+        return !isExcludedStudyName(st.experimentTitle || st.studyName || '');
+      });
+    }
     var s = data.summary;
     var html = '';
 

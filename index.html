@@ -1134,9 +1134,22 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     if (s.type === 'PUBLIC') s.target = 200;
   });
 
-  // Names the API may still return for deleted/merged studies — keep auto-merge
-  // from re-introducing them as synthetic records (compared lowercase, substring).
-  const EXCLUDED_NAMES = ['cure hydration', 'optimize her retreat'];
+  // Names the API may still return for deleted/merged/test studies — keep
+  // auto-merge from re-introducing them as synthetic records (compared
+  // lowercase, substring). Each test substring below is deliberately specific
+  // so it can never match the real, month-tagged studies it sits next to.
+  const EXCLUDED_NAMES = [
+    'cure hydration', 'optimize her retreat',
+    // ── Test / QA studies — never surface in the dashboard or reports ──
+    'nuchido 2',                   // Sleep & Stress Nuchido 2 (test, clinic)
+    'march 12 test',               // Whoop - March 12 Test
+    'a coffee study',              // Enhanced Brew - A Coffee Study  (≠ real "Enhanced Brew — Coffee Study (Nov 2025)")
+    'enhanced brew formula (ebf)', // Enhanced Brew Formula (EBF) RCT (≠ real "Enhanced Brew Formula — RCT (Jun 2025)")
+  ];
+  const isExcludedStudyName = name => {
+    const n = (name || '').toLowerCase();
+    return EXCLUDED_NAMES.some(ex => n.includes(ex));
+  };
 
   // ============================================================
   // DATA SERVICE
@@ -1469,7 +1482,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         const displayName = entryName(entry);
         if (!displayName) return;
         const nameLower = displayName.toLowerCase();
-        if (EXCLUDED_NAMES.some(ex => nameLower.includes(ex))) return;
+        if (isExcludedStudyName(displayName)) return;
 
         // Substring match against local STUDIES to inherit curated extras
         // (notes, outlier flags, complexity factors, etc.).
@@ -4085,7 +4098,11 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
 
   // Shape the live GET /api/public-studies payload into the render model.
   function psNormalizeLive(api) {
-    const studies = (api.studies || []).map(s => ({
+    // Drop test / excluded studies before anything is counted or charted.
+    const rawStudies = api.studies || [];
+    const srcStudies = rawStudies.filter(s => !isExcludedStudyName(s && s.name));
+    const excludedSome = srcStudies.length !== rawStudies.length;
+    const studies = srcStudies.map(s => ({
       id: s.id, name: s.name, category: s.category || 'Other',
       status: s.status || null, statusEffective: s.statusEffective || s.status || null,
       participants: Number(s.participants) || 0,
@@ -4102,7 +4119,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     }));
     // Roll per-study demographics up to an aggregate for the distribution charts.
     const gender = {}, age = {}, geo = {}, wearables = {};
-    (api.studies || []).forEach((s, i) => {
+    srcStudies.forEach((s, i) => {
       const d = s.demographics || {};
       psAddCounts(gender, d.gender);
       psAddCounts(age, d.ageRange);
@@ -4111,7 +4128,9 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const ws = studies[i].wearable.length ? studies[i].wearable : ['Unknown'];
       ws.forEach(w => { const k = psWearableLabel(w); wearables[k] = (wearables[k] || 0) + studies[i].participants; });
     });
-    const sum = api.summary || {};
+    // Prefer the API summary, but once we've filtered studies out it no longer
+    // reconciles — recompute the headline numbers from the kept set instead.
+    const sum = excludedSome ? {} : (api.summary || {});
     const completedRates = studies.filter(s => s.completionRate > 0).map(s => s.completionRate);
     const runRate30d = studies.reduce((a, s) => a + (s.runRate30d || 0), 0);
     return {
