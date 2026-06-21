@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/recruiting", "destination": "/api/recruiting" }
+    { "source": "/api/recruiting", "destination": "/api/recruiting" },
+    { "source": "/api/public-studies", "destination": "/api/public-studies" }
   ]
 }

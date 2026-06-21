@@ -919,9 +919,12 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
   <!-- ============================================================ -->
   <div id="tab-public-studies" role="tabpanel" hidden>
     <div style="margin-bottom:18px;">
-      <h2 style="font-size:22px;font-weight:700;margin:0 0 4px;">Public Studies Analytics</h2>
-      <div style="font-size:12px;color:var(--text-dim);">Source: Manpreet&apos;s May 15, 2026 participant export · all-time public-challenge dataset</div>
-      <div style="font-size:11px;color:var(--text-dim);margin-top:6px;"><strong style="color:var(--lime);">Health (v1)</strong> is based on completion rate (≥55% healthy · 35–55% watch · &lt;35% low). Pace, time-on-catalog, and avg joins/month will appear once the operations API supplies launch dates + a monthly joins series.</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <h2 style="font-size:22px;font-weight:700;margin:0 0 4px;">Public Studies Analytics</h2>
+        <span id="ps-source-badge" class="status-badge cached" style="display:none;"><span class="dot"></span><span id="ps-source-badge-text">Cached</span></span>
+      </div>
+      <div id="ps-source-line" style="font-size:12px;color:var(--text-dim);">Loading live public-studies feed…</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:6px;"><strong style="color:var(--lime);">Health (v1)</strong> is based on completion rate (≥55% healthy · 35–55% watch · &lt;35% low). Launch date, days on catalog, and 30-day run-rate now come straight from the operations API per study.</div>
     </div>
 
     <div class="kpi-grid" id="ps-kpi-grid"></div>
@@ -945,8 +948,8 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
           <div class="ps-chart-wrap"><canvas id="ps-chart-age"></canvas></div>
         </div>
         <div class="ps-chart-card">
-          <h3>Ethnicity</h3>
-          <div class="ps-chart-wrap"><canvas id="ps-chart-ethnicity"></canvas></div>
+          <h3 id="ps-geo-title">Region</h3>
+          <div class="ps-chart-wrap"><canvas id="ps-chart-geo"></canvas></div>
         </div>
       </div>
     </div>
@@ -972,8 +975,10 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
               <th data-col="returning" class="num">Returning</th>
               <th data-col="completed" class="num">Completed</th>
               <th data-col="completionRate" class="num">Completion %</th>
+              <th data-col="runRate30d" class="num">Run-rate 30d</th>
               <th data-col="avgDaysTagged" class="num">Avg Days Tagged</th>
               <th data-col="avgDaysMissed" class="num">Avg Days Missed</th>
+              <th data-col="launchDate">Launch</th>
             </tr>
           </thead>
           <tbody id="ps-detail-tbody"></tbody>
@@ -1177,6 +1182,26 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         console.warn('Cached stats also unavailable:', err2.message);
         throw new Error('Both live API and cached stats unavailable');
       }
+    },
+
+    async fetchPublicStudies() {
+      // Live Public Studies feed — replaces the manual May-15 participant export.
+      // 1) Vercel proxy first — same-origin /api/public-studies, no CORS, no key leak.
+      try {
+        const resp = await fetch('/api/public-studies');
+        if (resp.ok) return await resp.json();
+        throw new Error(`Proxy ${resp.status}: ${resp.statusText}`);
+      } catch (err) {
+        console.warn('Public-studies proxy unavailable, trying direct API:', err.message);
+      }
+      // 2) Fall back to direct upstream API (or user-supplied ?proxy=). No query params.
+      const headers = PROXY_BASE ? {} : { 'x-api-key': API_KEY };
+      const directUrl = PROXY_BASE
+        ? `${PROXY_BASE}/api/public-studies`
+        : 'https://operations.reputablehealth.net/api/public-studies';
+      const resp = await fetch(directUrl, { headers });
+      if (!resp.ok) throw new Error(`API ${resp.status}: ${resp.statusText}`);
+      return await resp.json();
     },
 
     getSummary() {
@@ -4007,34 +4032,151 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // Brand-aligned palette for slicing distribution charts
   const PS_PALETTE = ['#C8E64A', '#00B39F', '#6C5CE7', '#60A5FA', '#FB7185', '#FBBF24', '#34D399', '#A78BFA', '#F472B6', '#94A3B8', '#10B981'];
 
-  let psRendered = false;
+  let psModel = null;          // normalized render model (live feed or export fallback)
+  let psRenderedSource = null; // 'live' | 'export' — keep re-fetching until we have live
+  let psLoading = false;       // guard against overlapping fetches
   let psCharts = {};
   let psSortCol = 'participants';
   let psSortDir = 'desc';
 
-  function psRenderKPIs() {
-    const studies = PS_DATA.studies;
-    const totalParticipants = studies.reduce((a, s) => a + s.participants, 0);
-    const totalNew = studies.reduce((a, s) => a + s.new, 0);
-    const totalReturning = studies.reduce((a, s) => a + s.returning, 0);
-    const completedStudies = studies.filter(s => s.completionRate > 0).length;
-    const completedRates = studies.filter(s => s.completionRate > 0).map(s => s.completionRate);
-    const avgRate = completedRates.length ? completedRates.reduce((a, b) => a + b, 0) / completedRates.length : 0;
-    const returningPct = totalParticipants > 0 ? (totalReturning / totalParticipants * 100) : 0;
+  // ── Normalization helpers: shape live feed / embedded export into one model ──
 
-    $('#ps-kpi-grid').innerHTML = `
-      <div class="kpi-card"><div class="kpi-label">Total Participants</div><div class="kpi-value teal">${totalParticipants.toLocaleString()}</div><div class="kpi-sub">across ${studies.length} public studies</div></div>
-      <div class="kpi-card"><div class="kpi-label">Studies Completed</div><div class="kpi-value indigo">${completedStudies}</div><div class="kpi-sub">of ${studies.length} with reported completion</div></div>
-      <div class="kpi-card"><div class="kpi-label">Avg Completion Rate</div><div class="kpi-value lime">${avgRate.toFixed(1)}%</div><div class="kpi-sub">study-weighted mean</div></div>
-      <div class="kpi-card"><div class="kpi-label">New vs Returning</div><div class="kpi-value green">${returningPct.toFixed(0)}% returning</div><div class="kpi-sub">${totalReturning.toLocaleString()} returning · ${totalNew.toLocaleString()} new</div></div>
-    `;
+  // API wearable values are lowercase slugs (e.g. "oura"); map to display labels.
+  function psWearableLabel(w) {
+    const k = String(w || '').trim().toLowerCase();
+    const map = {
+      oura: 'Oura', whoop: 'WHOOP', 'whoop v2': 'WHOOP v2',
+      apple_health: 'Apple Health', apple: 'Apple Health', apple_watch: 'Apple Watch',
+      garmin: 'Garmin', fitbit: 'Fitbit',
+    };
+    if (map[k]) return map[k];
+    if (!k) return 'Unknown';
+    return k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function psAddCounts(target, src) {
+    if (!src) return;
+    for (const [k, v] of Object.entries(src)) {
+      const key = (k == null || k === '') ? 'Unknown' : k;
+      target[key] = (target[key] || 0) + (Number(v) || 0);
+    }
+  }
+
+  // Order age buckets by their first number; Unknown / Prefer-not-to-say last.
+  function psSortAgeObj(obj) {
+    const rank = k => /unknown|prefer|n\/?a/i.test(k) ? 9999 : (k.match(/\d+/) ? parseInt(k.match(/\d+/)[0], 10) : 9998);
+    return Object.fromEntries(Object.entries(obj).sort((a, b) => rank(a[0]) - rank(b[0])));
+  }
+  function psSortCountObj(obj) {
+    return Object.fromEntries(Object.entries(obj).sort((a, b) => b[1] - a[1]));
+  }
+
+  function psCategoryColor(cat) {
+    if (PS_CATEGORY_COLOR[cat]) return PS_CATEGORY_COLOR[cat];
+    let h = 0; for (const ch of String(cat || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return PS_PALETTE[h % PS_PALETTE.length];
+  }
+
+  function psFmtDate(d) {
+    const t = Date.parse(d);
+    if (isNaN(t)) return esc(String(d));
+    return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  // Shape the live GET /api/public-studies payload into the render model.
+  function psNormalizeLive(api) {
+    const studies = (api.studies || []).map(s => ({
+      id: s.id, name: s.name, category: s.category || 'Other',
+      status: s.status || null, statusEffective: s.statusEffective || s.status || null,
+      participants: Number(s.participants) || 0,
+      new: Number(s.new) || 0, returning: Number(s.returning) || 0,
+      completed: Number(s.completed) || 0,
+      completionRate: Number(s.completionRate) || 0,
+      avgDaysTagged: Number(s.avgDaysTagged) || 0,
+      avgDaysMissed: Number(s.avgDaysMissed) || 0,
+      launchDate: s.launchDate || null,
+      days: (s.days == null ? null : Number(s.days)),
+      runRate30d: (s.runRate30d == null ? null : Number(s.runRate30d)),
+      joinsByMonth: Array.isArray(s.joinsByMonth) ? s.joinsByMonth : [],
+      wearable: Array.isArray(s.wearable) ? s.wearable : (s.wearable ? [s.wearable] : []),
+    }));
+    // Roll per-study demographics up to an aggregate for the distribution charts.
+    const gender = {}, age = {}, geo = {}, wearables = {};
+    (api.studies || []).forEach((s, i) => {
+      const d = s.demographics || {};
+      psAddCounts(gender, d.gender);
+      psAddCounts(age, d.ageRange);
+      psAddCounts(geo, d.region);
+      // Attribute each study's participants to its wearable(s) — a reach view.
+      const ws = studies[i].wearable.length ? studies[i].wearable : ['Unknown'];
+      ws.forEach(w => { const k = psWearableLabel(w); wearables[k] = (wearables[k] || 0) + studies[i].participants; });
+    });
+    const sum = api.summary || {};
+    const completedRates = studies.filter(s => s.completionRate > 0).map(s => s.completionRate);
+    const runRate30d = studies.reduce((a, s) => a + (s.runRate30d || 0), 0);
+    return {
+      source: 'live',
+      summary: {
+        totalStudies: sum.totalStudies ?? studies.length,
+        studiesCompleted: sum.studiesCompleted ?? completedRates.length,
+        totalParticipants: sum.totalParticipants ?? studies.reduce((a, s) => a + s.participants, 0),
+        newParticipants: sum.newParticipants ?? studies.reduce((a, s) => a + s.new, 0),
+        returningParticipants: sum.returningParticipants ?? studies.reduce((a, s) => a + s.returning, 0),
+        avgCompletionRate: sum.avgCompletionRate ?? (completedRates.length ? completedRates.reduce((a, b) => a + b, 0) / completedRates.length : 0),
+        runRate30d,
+      },
+      studies,
+      gender: psSortCountObj(gender), age: psSortAgeObj(age),
+      geo: psSortCountObj(geo), geoLabel: 'Region',
+      wearables: psSortCountObj(wearables),
+    };
+  }
+
+  // Fallback model from the embedded May-15 export (geo = ethnicity, no pace data).
+  function psNormalizeExport() {
+    const studies = PS_DATA.studies.map(s => ({
+      ...s, status: null, statusEffective: null,
+      launchDate: null, days: null, runRate30d: null, joinsByMonth: [], wearable: [],
+    }));
+    const completedRates = studies.filter(s => s.completionRate > 0).map(s => s.completionRate);
+    return {
+      source: 'export',
+      summary: {
+        totalStudies: studies.length,
+        studiesCompleted: completedRates.length,
+        totalParticipants: studies.reduce((a, s) => a + s.participants, 0),
+        newParticipants: studies.reduce((a, s) => a + s.new, 0),
+        returningParticipants: studies.reduce((a, s) => a + s.returning, 0),
+        avgCompletionRate: completedRates.length ? completedRates.reduce((a, b) => a + b, 0) / completedRates.length : 0,
+        runRate30d: null,
+      },
+      studies,
+      gender: psSortCountObj({ ...PS_DATA.gender }), age: psSortAgeObj({ ...PS_DATA.age }),
+      geo: psSortCountObj({ ...PS_DATA.ethnicity }), geoLabel: 'Ethnicity',
+      wearables: { ...PS_DATA.wearables },
+    };
+  }
+
+  function psRenderKPIs() {
+    const sum = psModel.summary;
+    const returningPct = sum.totalParticipants > 0 ? (sum.returningParticipants / sum.totalParticipants * 100) : 0;
+    const cards = [
+      `<div class="kpi-card"><div class="kpi-label">Total Participants</div><div class="kpi-value teal">${sum.totalParticipants.toLocaleString()}</div><div class="kpi-sub">across ${sum.totalStudies} public studies</div></div>`,
+      `<div class="kpi-card"><div class="kpi-label">Studies Completed</div><div class="kpi-value indigo">${sum.studiesCompleted}</div><div class="kpi-sub">of ${sum.totalStudies} public studies</div></div>`,
+      `<div class="kpi-card"><div class="kpi-label">Avg Completion Rate</div><div class="kpi-value lime">${(sum.avgCompletionRate || 0).toFixed(1)}%</div><div class="kpi-sub">across challenges with completions</div></div>`,
+      `<div class="kpi-card"><div class="kpi-label">New vs Returning</div><div class="kpi-value green">${returningPct.toFixed(0)}% returning</div><div class="kpi-sub">${sum.returningParticipants.toLocaleString()} returning · ${sum.newParticipants.toLocaleString()} new</div></div>`,
+    ];
+    if (sum.runRate30d != null) {
+      cards.push(`<div class="kpi-card"><div class="kpi-label">30-Day Momentum</div><div class="kpi-value blue">${Number(sum.runRate30d).toLocaleString()}</div><div class="kpi-sub">new joins in the last 30 days</div></div>`);
+    }
+    $('#ps-kpi-grid').innerHTML = cards.join('');
   }
 
   function psRenderCompletionChart() {
-    const sorted = PS_DATA.studies.slice().sort((a, b) => b.completionRate - a.completionRate);
+    const sorted = psModel.studies.slice().sort((a, b) => b.completionRate - a.completionRate);
     const labels = sorted.map(s => s.name);
     const data = sorted.map(s => s.completionRate);
-    const colors = sorted.map(s => PS_CATEGORY_COLOR[s.category] || '#999');
+    const colors = sorted.map(s => psCategoryColor(s.category));
     psCharts.completion = new Chart($('#ps-chart-completion'), {
       type: 'bar',
       data: { labels, datasets: [{ label: 'Completion %', data, backgroundColor: colors, borderWidth: 0 }] },
@@ -4108,13 +4250,20 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   }
 
   function psRenderTable() {
-    const studies = PS_DATA.studies.slice().sort((a, b) => {
+    const studies = psModel.studies.slice().sort((a, b) => {
       if (psSortCol === 'health') {
         const d = psHealth(a).score - psHealth(b).score;
         return psSortDir === 'asc' ? d : -d;
       }
-      const av = a[psSortCol]; const bv = b[psSortCol];
+      if (psSortCol === 'launchDate') {
+        const av = a.launchDate ? Date.parse(a.launchDate) : -Infinity;
+        const bv = b.launchDate ? Date.parse(b.launchDate) : -Infinity;
+        return psSortDir === 'asc' ? av - bv : bv - av;
+      }
+      let av = a[psSortCol]; let bv = b[psSortCol];
       if (typeof av === 'string') return psSortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      if (av == null) av = -Infinity;
+      if (bv == null) bv = -Infinity;
       return psSortDir === 'asc' ? av - bv : bv - av;
     });
     $('#ps-detail-tbody').innerHTML = studies.map(s => {
@@ -4122,17 +4271,21 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const ratePct = s.completionRate > 0 ? s.completionRate.toFixed(2) + '%' : '—';
       const rateColor = s.completionRate >= 70 ? 'var(--green)' : s.completionRate >= 50 ? 'var(--lime)' : s.completionRate > 0 ? 'var(--yellow)' : 'var(--text-dim)';
       const h = psHealth(s);
+      const runRate = s.runRate30d == null ? '—' : Number(s.runRate30d).toLocaleString();
+      const launch = s.launchDate ? psFmtDate(s.launchDate) : '—';
       return `<tr>
         <td>${esc(s.name)}</td>
-        <td><span class="ps-cat ${catClass}">${s.category}</span></td>
-        <td><span title="Health (v1) = completion rate: ≥55% healthy · 35–55% watch · &lt;35% low. Pace &amp; time-on-catalog will appear once the API provides launch dates + monthly joins." style="color:${h.color};font-weight:600;white-space:nowrap;">● ${h.label}</span></td>
+        <td><span class="ps-cat ${catClass}">${esc(s.category)}</span></td>
+        <td><span title="Health (v1) = completion rate: ≥55% healthy · 35–55% watch · &lt;35% low. Launch date &amp; 30-day run-rate now come live from the operations API." style="color:${h.color};font-weight:600;white-space:nowrap;">● ${h.label}</span></td>
         <td class="num">${s.participants.toLocaleString()}</td>
         <td class="num">${s.new.toLocaleString()}</td>
         <td class="num">${s.returning.toLocaleString()}</td>
         <td class="num">${s.completed.toLocaleString()}</td>
         <td class="num" style="color:${rateColor};font-weight:600;">${ratePct}</td>
+        <td class="num">${runRate}</td>
         <td class="num">${s.avgDaysTagged.toFixed(1)}</td>
         <td class="num">${s.avgDaysMissed.toFixed(1)}</td>
+        <td style="white-space:nowrap;">${launch}</td>
       </tr>`;
     }).join('');
     $$('#ps-detail-table th').forEach(th => {
@@ -4142,16 +4295,59 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     });
   }
 
-  function psRenderAll() {
-    if (psRendered) return;
-    psRendered = true;
-    psRenderKPIs();
-    psRenderCompletionChart();
-    psCharts.gender = psDoughnut('#ps-chart-gender', PS_DATA.gender);
-    psCharts.age = psBar('#ps-chart-age', PS_DATA.age);
-    psCharts.ethnicity = psBar('#ps-chart-ethnicity', PS_DATA.ethnicity);
-    psCharts.wearables = psDoughnut('#ps-chart-wearables', PS_DATA.wearables);
-    psRenderTable();
+  function psDestroyCharts() {
+    Object.values(psCharts).forEach(c => { try { c && c.destroy(); } catch (_) {} });
+    psCharts = {};
+  }
+
+  function psRenderSourceBadge(model) {
+    const badge = $('#ps-source-badge');
+    const text = $('#ps-source-badge-text');
+    const line = $('#ps-source-line');
+    if (!badge || !line) return;
+    badge.style.display = '';
+    if (model.source === 'live') {
+      badge.className = 'status-badge live';
+      if (text) text.textContent = 'Live';
+      line.innerHTML = 'Source: live operations API · <code style="color:var(--text-secondary);">GET /api/public-studies</code> · refreshes on each visit';
+    } else {
+      badge.className = 'status-badge cached';
+      if (text) text.textContent = 'Cached';
+      line.textContent = 'Source: embedded May 15, 2026 export — live feed unavailable, showing the cached snapshot.';
+    }
+  }
+
+  async function psRenderAll() {
+    if (psRenderedSource === 'live' || psLoading) return; // already showing best data
+    psLoading = true;
+    try {
+      let model;
+      try {
+        const api = await dataService.fetchPublicStudies();
+        model = psNormalizeLive(api);
+        if (!model.studies.length) throw new Error('Live feed returned no studies');
+      } catch (err) {
+        console.warn('Public Studies feed unavailable, using embedded May-15 export:', err.message);
+        model = psNormalizeExport();
+      }
+      psModel = model;
+      psDestroyCharts();
+      psRenderSourceBadge(model);
+      psRenderKPIs();
+      psRenderCompletionChart();
+      psCharts.gender = psDoughnut('#ps-chart-gender', psModel.gender);
+      psCharts.age = psBar('#ps-chart-age', psModel.age);
+      const geoTitle = $('#ps-geo-title');
+      if (geoTitle) geoTitle.textContent = psModel.geoLabel;
+      // Few buckets (e.g. Region) read better as a doughnut; many (Ethnicity) as a bar.
+      const geoChart = Object.keys(psModel.geo).length <= 6 ? psDoughnut : psBar;
+      psCharts.geo = geoChart('#ps-chart-geo', psModel.geo);
+      psCharts.wearables = psDoughnut('#ps-chart-wearables', psModel.wearables);
+      psRenderTable();
+      psRenderedSource = model.source;
+    } finally {
+      psLoading = false;
+    }
   }
 
   // Tab switching
