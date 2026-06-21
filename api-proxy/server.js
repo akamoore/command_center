@@ -73,6 +73,46 @@ app.get('/api/recruiting', (req, res) => {
   upstream.end();
 });
 
+// Proxy endpoint — forwards GET /api/public-studies to the upstream API.
+// No query params: returns every public challenge plus a summary block.
+app.get('/api/public-studies', (req, res) => {
+  if (!API_KEY) {
+    return res.status(500).json({ error: 'API_KEY not configured on proxy server' });
+  }
+
+  const options = {
+    hostname: API_HOST,
+    path: '/api/public-studies',
+    method: 'GET',
+    headers: {
+      'x-api-key': API_KEY,
+      'Accept': 'application/json'
+    }
+  };
+
+  const upstream = https.request(options, (upstreamRes) => {
+    let body = '';
+    upstreamRes.on('data', chunk => { body += chunk; });
+    upstreamRes.on('end', () => {
+      res.status(upstreamRes.statusCode);
+      res.setHeader('Content-Type', 'application/json');
+      res.send(body);
+    });
+  });
+
+  upstream.on('error', (err) => {
+    console.error('Upstream request failed:', err.message);
+    res.status(502).json({ error: 'Failed to reach upstream API', detail: err.message });
+  });
+
+  upstream.setTimeout(15000, () => {
+    upstream.destroy();
+    res.status(504).json({ error: 'Upstream API timed out' });
+  });
+
+  upstream.end();
+});
+
 // ============================================================
 // SENDGRID EMAIL ENDPOINTS
 // ============================================================
