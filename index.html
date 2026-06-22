@@ -1142,6 +1142,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     'cure hydration', 'optimize her retreat',
     // ── Test / QA studies — never surface in the dashboard or reports ──
     'nuchido 2',                   // Sleep & Stress Nuchido 2 (test, clinic)
+    'nuchido 3',                   // Sleep & Stress Nuchido 3 (test, public)
     'march 12 test',               // Whoop - March 12 Test
     'a coffee study',              // Enhanced Brew - A Coffee Study  (≠ real "Enhanced Brew — Coffee Study (Nov 2025)")
     'enhanced brew formula (ebf)', // Enhanced Brew Formula (EBF) RCT (≠ real "Enhanced Brew Formula — RCT (Jun 2025)")
@@ -3622,7 +3623,20 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // ============================================================
   function renderPublicStudies() {
     const container = $('#public-studies-content');
-    const publicStudies = STUDIES.filter(s => s.type === 'PUBLIC');
+    // Use the live, API-enriched studies (same source as the rest of the dashboard)
+    // so public studies — including newly-launched ones — show real recruitment
+    // numbers from the ops API instead of hand-maintained values. Completed studies
+    // are dropped to keep the table focused on active community recruiting.
+    const allStudies = dataService.getEnrichedStudies ? dataService.getEnrichedStudies() : STUDIES;
+    const publicStudies = allStudies.filter(s =>
+      s.type === 'PUBLIC' && s.status !== 'complete' && s.status !== 'completed');
+    // launchDate may be an ISO string (API) or a pre-formatted label (curated).
+    const fmtStart = d => {
+      if (!d) return '—';
+      if (!/^\d{4}-\d{2}-\d{2}/.test(d)) return d;          // already e.g. "Jun 3, 2026"
+      const dt = new Date(d.slice(0, 10) + 'T12:00:00');
+      return isNaN(dt) ? d : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
 
     if (!publicStudies.length) {
       container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">No public studies data available.</div>';
@@ -3722,7 +3736,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
                 <td>${inCell}</td>
                 <td>${compCell}</td>
                 <td>${complCell}</td>
-                <td style="white-space:nowrap;">${s.launchDate || '—'}</td>
+                <td style="white-space:nowrap;">${fmtStart(s.launchDate)}</td>
               </tr>`;
             }).join('')}
           </tbody>
