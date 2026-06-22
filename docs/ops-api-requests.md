@@ -14,8 +14,14 @@ Endpoint in use: `GET /api/recruiting?days=<N>&scope=all` (header `x-api-key`).
 
 Public / community studies (e.g. The Red Bull / Celsius / Monster / Ghost
 Effect) currently aren't returned at all, so they have **no live data** and their
-launch dates must be typed into the code by hand. Please include every study,
-each with a complete, clean object:
+launch dates must be typed into the code by hand. **Visible symptom:** on the
+dashboard's *Community / Public Studies* table, those four energy-drink studies
+(launched Jun 3, 2026 — after the last manual data pull) show "—" for Recruited /
+In Study / Completed / Compliance, because nothing in the API supplies their
+numbers. Please include every study, each with a complete, clean object. The
+dashboard matches API entries to its rows by **`experimentTitle`** (case-insensitive
+substring), so the title must line up with the on-screen name (e.g. "The Red Bull
+Effect"):
 
 ```jsonc
 {
@@ -65,61 +71,72 @@ The dashboard normalizes these client-side, so this is optional cleanup:
 - `status`: API uses `live` / `coming_soon`; dashboard uses `active` / `coming` / `complete` / `recruiting`.
 - `type`: API uses `Clinical` / `Public` / `Self-Serve`; dashboard uses `RCT` / `RWE` / `VEP` / `PUBLIC`.
 
-## 6. Real-time feed for the **Public Studies Analytics** tab  ⭐
+## 6. Real-time feed for the **Public Studies Analytics** tab  ⭐  (endpoint: `GET /api/public-studies`)
 
-The dashboard's **Public Studies** tab is currently powered by a **manual
-participant export** ("Manpreet's May 15, 2026 export · all-time public-challenge
-dataset") — so it's a static snapshot that goes stale (it's already a month old).
-We'd like an API / feed so these numbers update in **real time**, replacing the
-manual upload.
+**Status — the dashboard side is already built and live.** It calls
+`GET /api/public-studies` (same `x-api-key`, no query params) on every visit and
+will switch to real-time data **automatically** the moment the endpoint returns
+it — no further dashboard changes needed. Until then the tab falls back to a
+**static May 15, 2026 manual export** that is now badly stale. We just need the
+endpoint to return the payload below.
 
-Per **public study / challenge**, we use:
+**Exact response shape the tab consumes** — match these field names and it drops
+straight in with zero rework:
 
 ```jsonc
 {
-  "id": 492,
-  "name": "The 4-7-8 Effect",
-  "category": "Sleep",          // grouping (Sleep, Energy, etc.)
-  "participants": 180,
-  "new": 36,
-  "returning": 144,
-  "completed": 105,
-  "completionRate": 58.33,      // %
-  "avgDaysTagged": 4.2,
-  "avgDaysMissed": 0.6
+  "summary": {                      // optional — the tab recomputes from studies[] if omitted
+    "totalStudies": 21,
+    "studiesCompleted": 18,         // # of studies with completionRate > 0
+    "totalParticipants": 1510,
+    "newParticipants": 300,
+    "returningParticipants": 1210,
+    "avgCompletionRate": 55.4       // %, mean across studies with completions
+  },
+  "studies": [                      // REQUIRED — one object per public challenge
+    {
+      // ── Core (minimum viable — powers the KPI cards + completion-rate chart) ──
+      "id": 492,
+      "name": "The 4-7-8 Effect",
+      "category": "Sleep",          // Sleep | Recovery | Stress | FitnessAndActivity
+      "participants": 180,
+      "new": 36,
+      "returning": 144,
+      "completed": 105,
+      "completionRate": 58.33,      // %
+      "avgDaysTagged": 4.2,
+      "avgDaysMissed": 0.6,
+
+      // ── Health view (the static snapshot has none of this) ──
+      "status": "live",             // live | complete | closed
+      "launchDate": "2026-02-10",   // ISO date — powers "time on catalog"
+      "days": 130,                  // integer days on catalog
+      "runRate30d": 22,             // joins in the last 30 days — momentum flag
+      "joinsByMonth": [             // monthly time series — powers pace / trend
+        { "month": "2026-04", "joins": 42, "onboarded": 30 }
+      ],
+
+      // ── Distribution charts ──
+      "wearable": ["oura"],         // codes: oura, whoop_v2, fitbit, garmin, apple_health_kit
+      "demographics": {             // PER STUDY (the old export was aggregate-only)
+        "gender":   { "Female": 130, "Male": 45, "Unknown": 5 },
+        "ageRange": { "26–35": 60, "36–45": 70, "46–55": 40 },
+        "region":   { "West": 80, "Northeast": 50, "South": 30, "Midwest": 20 }
+      }
+    }
+  ]
 }
 ```
 
-From which the tab derives the headline cards: **total participants**,
-**studies completed** (of total), **avg completion rate** (study-weighted), and
-**new vs returning** split — plus the per-study completion-rate chart.
-
-Requests:
-- A **real-time endpoint** (or include public challenges in the existing
-  recruiting feed, clearly flagged as public) returning the per-study object above.
-- **Any additional demographic breakdowns** you can expose for public-challenge
-  participants — e.g. age range, gender, location/region — would be valuable here;
-  the current manual export doesn't include them.
-- Match these field names where practical so the data drops straight into the
-  existing Public Studies tab with minimal rework.
-
-### 6a. Extra fields needed for a per-study **health** view
-
-We want to show how each public study is doing over time (pace, tenure,
-momentum). The current snapshot can't support this — please also include, per
-public study:
-
-- **`launchDate` / `catalogAddedDate`** — when it went live / was added to the
-  catalog → powers **time on catalog**.
-- **A monthly time series of joins (and onboards)** — e.g.
-  `joinsByMonth: [{ "month": "2026-04", "joins": 42, "onboarded": 30 }, …]` →
-  powers **join/onboard pace**, **avg participants per month**, and trend
-  (accelerating / slowing / stalled).
-- (Derivable from the above, but explicit is fine too) **current run-rate**
-  (joins in the last 30 days) so we can flag stale / high-momentum studies.
-
-With `launchDate` + `joinsByMonth`, the dashboard can compute: time on catalog,
-avg joins/month, last-30-day pace, and an up/down momentum indicator per study.
+Notes:
+- The tab **rolls the per-study `demographics` up** into the aggregate Gender /
+  Age / Region charts, so demographics must be supplied **per study**, not as a
+  single top-level total. **`region`** replaces the old export's "ethnicity"
+  breakdown.
+- **Ship incrementally if that's easier:** the **core block alone** ends the
+  staleness and makes the tab self-updating. `status` + `launchDate` + `days` +
+  `runRate30d` + `joinsByMonth` then light up the per-study health/momentum view;
+  `demographics` + `wearable` light up the distribution charts.
 
 ---
 
