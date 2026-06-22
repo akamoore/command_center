@@ -10,18 +10,23 @@ Endpoint in use: `GET /api/recruiting?days=<N>&scope=all` (header `x-api-key`).
 
 ---
 
-## 1. Return **every** study in `onboarding.byStudy[]` — including PUBLIC/community studies  ⭐ highest impact
+## 1. Return **every** study in `onboarding.byStudy[]` — including PUBLIC/community studies  ✅ largely shipped
 
-Public / community studies (e.g. The Red Bull / Celsius / Monster / Ghost
-Effect) currently aren't returned at all, so they have **no live data** and their
-launch dates must be typed into the code by hand. **Visible symptom:** on the
-dashboard's *Community / Public Studies* table, those four energy-drink studies
-(launched Jun 3, 2026 — after the last manual data pull) show "—" for Recruited /
-In Study / Completed / Compliance, because nothing in the API supplies their
-numbers. Please include every study, each with a complete, clean object. The
-dashboard matches API entries to its rows by **`experimentTitle`** (case-insensitive
-substring), so the title must line up with the on-screen name (e.g. "The Red Bull
-Effect"):
+**Status (Jun 2026): done for most studies — thank you.** The live
+`/api/recruiting` feed now returns public/community studies: The Red Bull,
+Celsius, Monster, and Ghost Effects all come back in `onboarding.byStudy[]` with
+real `joined` / `leads` / `target` / `count` / `completed` and (mostly) an ISO
+`launchDate`. The dashboard now reads this live feed for the *Community / Public
+Studies* table — those rows previously looked blank only because the dashboard was
+still using hand-typed values, which is now fixed on our side.
+
+Remaining gaps:
+- **`launchDate` is still `null` for some live studies** (e.g. *The Monster
+  Effect*, experimentId 542) — please set it whenever a study goes live.
+- Keep including **every** study going forward. The dashboard matches API entries
+  to curated rows by **`experimentTitle`** (case-insensitive substring), so titles
+  must line up with the on-screen name (e.g. "The Red Bull Effect"). For reference,
+  the per-study object shape we rely on:
 
 ```jsonc
 {
@@ -43,12 +48,13 @@ Effect"):
 
 ## 2. Fix two data-quality bugs
 
-- **`days` is a string** like `"1 days"` (and appeared to be an unset placeholder
-  on experiment 549). Please return a real **number** (or omit if unknown).
-- **Finished studies still report `status: "live"`** — e.g. *Quantum Upgrade:
-  Cognitive Performance*, which has ended, still comes back as live, so it gets
-  counted as actively recruiting. `status` should reflect completion
-  (`complete`/`closed`) when a study ends.
+- ✅ **`days` is now a number** (e.g. `7`, `28`, `90`) — resolved, thank you.
+  *(It previously came back as a string like `"1 days"`.)*
+- **Make `status` reflect completion when a study ends.** Many finished studies
+  now correctly return `completed` (e.g. the Enhanced Brew RCT) ✅ — but a few
+  long-finished ones still report `live`, which counts them as actively
+  recruiting. The dashboard guards this with a curated override; fixing it at the
+  source would let us drop that workaround.
 
 ## 3. Per-source attribution for the acquisition funnel
 
