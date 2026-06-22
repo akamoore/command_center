@@ -10,6 +10,27 @@ Endpoint in use: `GET /api/recruiting?days=<N>&scope=all` (header `x-api-key`).
 
 ---
 
+## Priority checklist
+
+| # | Ask | Priority | Status |
+|---|-----|----------|--------|
+| **6** | **`GET /api/public-studies` feed** — the Public Studies Analytics tab is stuck on a stale May-15 snapshot; the route currently **307-redirects to `/login`** (our `x-api-key` isn't honored there). | 🔴 High | Open |
+| **8** | **Study health score + tier in `/api/recruiting`** — expose the On Track / At Risk / Critical score you already compute, per study. | 🔴 High | Open |
+| **9** | **Off-catalog studies still report `status: "live"`** — retired challenges leak into the dashboard. | 🟡 Medium | Open |
+| **1** | **`launchDate: null` on some live studies** (e.g. The Monster Effect). | 🟡 Medium | Mostly done |
+| **10** | **Public studies showing end dates** — evergreen challenges shouldn't have one. | 🟡 Medium | Open |
+| **2** | **`status` should reflect completion** when a study ends. | 🟡 Medium | Partly done |
+| **7** | **Participant-level study history** — unlocks the real public→sponsored funnel. | 🟢 Bigger lift | Open |
+| **3** | **Per-source attribution** for the acquisition funnel. | 🟢 Bigger lift | Open |
+| **4** | **Populate `funnel` + `metaAds`** in the response. | 🟢 Verify | Open |
+| **5** | **Consistent enums** (status / type). | 🟢 Nice-to-have | Open |
+
+**✅ Already shipped — thank you:** public/community studies now returned (#1) · numeric `days` (#2) · the at-risk/critical health-score breakdown (captured in #8).
+
+Full detail for each item below. ↓
+
+---
+
 ## 1. Return **every** study in `onboarding.byStudy[]` — including PUBLIC/community studies  ✅ largely shipped
 
 **Status (Jun 2026): done for most studies — thank you.** The live
@@ -83,8 +104,12 @@ The dashboard normalizes these client-side, so this is optional cleanup:
 `GET /api/public-studies` (same `x-api-key`, no query params) on every visit and
 will switch to real-time data **automatically** the moment the endpoint returns
 it — no further dashboard changes needed. Until then the tab falls back to a
-**static May 15, 2026 manual export** that is now badly stale. We just need the
-endpoint to return the payload below.
+**static May 15, 2026 manual export** that is now badly stale.
+
+**Current behavior:** `GET /api/public-studies` with our `x-api-key` returns
+**`HTTP 307 → /login`** — the same key works on `/api/recruiting`, so it isn't an
+auth-key problem; the route just isn't exposed as a data API yet. We need it to
+return the payload below.
 
 **Exact response shape the tab consumes** — match these field names and it drops
 straight in with zero rework:
@@ -170,11 +195,46 @@ participants who went on to enroll in a sponsored study — the actual answer to
 public studies feed paid recruitment?" (Related to #3, but that item is acquisition
 *source*; this is study *history*.)
 
+## 8. Expose the study **health score + tier** in `/api/recruiting`
+
+The ops dashboard already classifies each study **On Track / At Risk / Critical**
+from a 0–1 health score (pace to 80% of target). Please include that per study in
+the `onboarding.byStudy[]` objects — both the raw **score** and the **tier** — so
+the Command Center can display the same labels. Today we show an interim estimate
+(recent joins + lifetime completions) because the score isn't in the API; once
+it's exposed we swap to the real one. Suggested fields:
+
+```jsonc
+{ "experimentId": 549, "healthScore": 0.62, "healthTier": "at_risk" }
+```
+
+> Note: there's already a separate field named `at_risk` (a count of active,
+> non-compliant participants). Please use a distinct name like **`healthTier`** for
+> the study-level On Track / At Risk / Critical label to avoid the collision.
+
+## 9. Mark **off-catalog** studies — they still report `status: "live"`
+
+Studies switched off the participant catalog months ago still come back as
+`status: "live"` (e.g. *Track Your Travel*, *Caffeine Effect*, *Caffeine Effect
+(W)*, *7 Day Yoga Challenge*, and the original *The 4-7-8 Effect*). They have no
+recent activity, but the dashboard can't tell they're retired, so we're
+**hard-coding them hidden** for now. Please expose catalog state — e.g.
+`status: "retired"` or `catalogActive: false` — so we can drop the manual hide-list.
+
+## 10. Public studies shouldn't carry **end dates**
+
+Evergreen public / community challenges are open-ended, but some come back with an
+`endDate`. Please clear `endDate` for public challenges (keep it for time-boxed
+sponsored studies). Heads-up: if the at-risk/critical score factors in "days
+remaining," stray end dates may also be **skewing those studies' health tier**.
+
 ---
 
 ### Why it matters
 
-Items **#1 and #2** are the big wins: once the API returns every study (public
-included) with a real `launchDate`, accurate `status`, and a numeric `days`, the
-dashboard stops needing manual edits to the hardcoded `STUDIES` array in
-`index.html` — which is the source of the staleness we keep running into.
+Every gap here is a place the dashboard either goes stale or falls back to
+hand-maintained values. The two highest-leverage items now are **#6** (the
+public-studies feed — it revives a whole dead tab) and **#8** (the health score —
+so the dashboard can show your real On Track / At Risk / Critical labels). The rest
+remove manual-maintenance gaps so the dashboard stops needing hand-edits to the
+hardcoded `STUDIES` array in `index.html`.
