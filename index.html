@@ -841,6 +841,7 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
     </div>
     <div class="section-body collapsed">
       <div id="public-studies-content"></div>
+      <div id="ps-health-panel" style="margin-top:24px;"></div>
       <!-- App Engagement Breakdown -->
       <div style="margin-top:24px;">
         <h3 style="color:var(--text-dim);margin-bottom:12px;">App Engagement Breakdown</h3>
@@ -3621,6 +3622,53 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // ============================================================
   // RENDER: Public Studies
   // ============================================================
+  // ── Public-study curation. Health is an INTERIM read (recent joins + lifetime
+  //    completions); it swaps to the ops API's On Track / At Risk / Critical score
+  //    once that's exposed. Notes are editorial — edit the strings below freely.
+  const PS_TIER = {
+    strong: { rank: 1, label: 'Strong',       color: 'var(--green)' },
+    soft:   { rank: 2, label: 'Softening',    color: 'var(--yellow)' },
+    watch:  { rank: 3, label: 'New · watch',  color: '#60A5FA' },
+    new:    { rank: 3, label: 'New',          color: '#60A5FA' },
+    alert:  { rank: 4, label: 'Not launched', color: '#FBBF24' },
+    done:   { rank: 5, label: 'Done',         color: 'var(--text-dim)' },
+  };
+  const PS_HEALTH = {
+    'reading ritual':          { tier: 'strong', note: 'Top momentum (25 joins/30d), 72 completions' },
+    'nature dose':             { tier: 'strong', note: '24 joins, 75 completions' },
+    'sunrise effect':          { tier: 'strong', note: '17 joins, 79 completions' },
+    'hydration effect':        { tier: 'strong', note: '14 joins, 75 completions' },
+    'dry week':                { tier: 'strong', note: '83 completions — highest lifetime' },
+    'gratitude effect':        { tier: 'strong', note: '11 joins, 80 completions' },
+    'cold shower':             { tier: 'strong', note: 'Newer (Apr), good momentum' },
+    '30-minute reset':         { tier: 'strong', note: '10 joins, 60 completions' },
+    'wim hof':                 { tier: 'soft',   note: '7 joins, 49 completions — borderline keep' },
+    '10k steps':               { tier: 'soft',   note: '66 lifetime but slowing — keep for legacy?' },
+    'power nap':               { tier: 'soft',   note: '5 joins, 37 completions — modest' },
+    'fasting reset':           { tier: 'soft',   note: 'Proven (53) but cooling' },
+    'seasonal superfoods':     { tier: 'soft',   note: 'Weakest live keeper — first to consider' },
+    '14 day yoga':             { tier: 'new',    note: 'Launched May 10; strong start (18 joins)' },
+    '4-7-8 effect (extended)': { tier: 'new',    note: 'Active; the kept half of the 4-7-8 pair' },
+    'celsius':                 { tier: 'watch',  note: 'Jun 3; 19 joins / 60 leads — converting (sponsor)' },
+    'ghost effect':            { tier: 'watch',  note: 'Jun 3; lead-heavy, low conversion (sponsor)' },
+    'red bull':                { tier: 'watch',  note: 'Jun 9; very early (sponsor)' },
+    'septasync':               { tier: 'new',    note: 'Jun 5; 8 joins, target 50 — watch' },
+    'monster effect':          { tier: 'alert',  note: 'No launch date yet; 19 leads waiting' },
+    'box breathing':           { tier: 'done',   note: '24 of 25 target — retire or re-target' },
+  };
+  const psHealthFor = name => {
+    const n = (name || '').toLowerCase();
+    const key = Object.keys(PS_HEALTH).find(k => n.includes(k));
+    return key ? PS_HEALTH[key] : null;
+  };
+  // Public studies switched off the participant catalog but still reported "live"
+  // by the ops API — hide from the public-studies list until the API marks them off.
+  const RETIRED_PUBLIC = ['track your travel', 'caffeine effect', '7 day yoga', 'the 4-7-8 effect'];
+  const isRetiredPublic = name => {
+    const n = (name || '').toLowerCase();
+    return RETIRED_PUBLIC.some(r => n.includes(r));
+  };
+
   function renderPublicStudies() {
     const container = $('#public-studies-content');
     // Use the live, API-enriched studies (same source as the rest of the dashboard)
@@ -3629,7 +3677,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     // are dropped to keep the table focused on active community recruiting.
     const allStudies = dataService.getEnrichedStudies ? dataService.getEnrichedStudies() : STUDIES;
     const publicStudies = allStudies.filter(s =>
-      s.type === 'PUBLIC' && s.status !== 'complete' && s.status !== 'completed');
+      s.type === 'PUBLIC' && s.status !== 'complete' && s.status !== 'completed' &&
+      !isRetiredPublic(s.name));
     // launchDate may be an ISO string (API) or a pre-formatted label (curated).
     const fmtStart = d => {
       if (!d) return '—';
@@ -3730,6 +3779,11 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
                 ? `<span style="font-weight:600;color:${complPct >= 90 ? 'var(--green)' : complPct >= 70 ? 'var(--yellow)' : 'var(--rose)'};">${complPct.toFixed(0)}%</span> <span style="color:var(--text-dim);">${compN}/${compD}</span>`
                 : '<span style="color:var(--text-dim);">—</span>';
 
+              const h = psHealthFor(s.name);
+              const healthCell = h
+                ? `<span title="${esc(h.note)}" style="color:${PS_TIER[h.tier].color};font-weight:600;white-space:nowrap;">● ${PS_TIER[h.tier].label}</span>`
+                : '<span style="color:var(--text-dim);">—</span>';
+
               return `<tr>
                 <td>${esc(s.name)}</td>
                 <td>${recCell}</td>
@@ -3737,6 +3791,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
                 <td>${compCell}</td>
                 <td>${complCell}</td>
                 <td style="white-space:nowrap;">${fmtStart(s.launchDate)}</td>
+                <td>${healthCell}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -3752,6 +3807,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { key: 'completed', label: 'Completed' },
     { key: 'compliance', label: 'Compliance' },
     { key: 'launchDate', label: 'Start Date' },
+    { key: 'health', label: 'Health' },
   ];
 
   function getCommSortValue(s, col) {
@@ -3765,8 +3821,42 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         const t = s.launchDate ? Date.parse(s.launchDate) : NaN;
         return Number.isFinite(t) ? t : -Infinity;
       }
+      case 'health': { const h = psHealthFor(s.name); return h ? PS_TIER[h.tier].rank : 99; }
       default: return 0;
     }
+  }
+
+  // Dedicated "Public Study Health" board — same data as the table's Health column,
+  // grouped by tier. Hidden retired studies are excluded just like the table.
+  function renderPublicStudyHealth() {
+    const el = $('#ps-health-panel');
+    if (!el) return;
+    const allStudies = dataService.getEnrichedStudies ? dataService.getEnrichedStudies() : STUDIES;
+    const studies = allStudies.filter(s =>
+      s.type === 'PUBLIC' && s.status !== 'complete' && s.status !== 'completed' && !isRetiredPublic(s.name));
+    const groups = {};
+    studies.forEach(s => {
+      const h = psHealthFor(s.name);
+      const tier = h ? h.tier : 'unknown';
+      (groups[tier] = groups[tier] || []).push({ s, h });
+    });
+    let html = `<h3 style="margin:0 0 4px;">Public Study Health</h3>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">Interim read from recent joins + lifetime completions — swaps to the operations API's On Track / At Risk / Critical score once it's exposed.</div>`;
+    ['strong', 'soft', 'watch', 'new', 'alert', 'done', 'unknown'].forEach(tier => {
+      const items = groups[tier];
+      if (!items || !items.length) return;
+      const meta = PS_TIER[tier] || { label: 'Unscored', color: 'var(--text-dim)' };
+      html += `<div style="margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:700;color:${meta.color};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">● ${meta.label} <span style="color:var(--text-dim);font-weight:500;">· ${items.length}</span></div>`;
+      items.forEach(({ s, h }) => {
+        html += `<div style="display:flex;justify-content:space-between;gap:16px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <span style="font-weight:600;color:var(--text);">${esc(s.name)}</span>
+          <span style="color:var(--text-dim);font-size:12px;text-align:right;">${h ? esc(h.note) : '—'}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    el.innerHTML = html;
   }
 
   // ============================================================
@@ -3799,6 +3889,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     renderEngagement();
     renderManualImpact();
     renderPublicStudies();
+    renderPublicStudyHealth();
     renderSourceStatus();
 
     $('#footer').textContent = `Recruitment Command Center · Reputable Health · Last refreshed ${dateStr} ${timeStr}`;
