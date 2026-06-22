@@ -3842,7 +3842,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     });
     let html = `<h3 style="margin:0 0 4px;">Public Study Health</h3>
       <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">Interim read from recent joins + lifetime completions — swaps to the operations API's On Track / At Risk / Critical score once it's exposed.</div>`;
-    ['strong', 'soft', 'watch', 'new', 'alert', 'done', 'unknown'].forEach(tier => {
+    ['strong', 'soft', 'watch', 'new', 'alert', 'done'].forEach(tier => {
       const items = groups[tier];
       if (!items || !items.length) return;
       const meta = PS_TIER[tier] || { label: 'Unscored', color: 'var(--text-dim)' };
