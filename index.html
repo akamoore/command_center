@@ -3384,7 +3384,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       <div style="margin-top:20px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-md);padding:20px;border-top:3px solid var(--teal);">
         <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--teal);margin-bottom:12px;">Public → Sponsored Pipeline</div>
         <div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:14px;">
-          Do participants who join free public challenges go on to enroll in sponsored or VEP studies? This is the key metric for whether public studies serve as a recruitment funnel.
+          Do participants who join free public challenges go on to enroll in sponsored studies? That's the funnel question — but as the note below explains, we can't confirm it per person yet, so these are context figures, not a conversion rate.
         </div>
         ${(() => {
           // Estimate overlap: public studies that launched BEFORE or alongside sponsored studies
@@ -3402,7 +3402,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px;">
               <div style="text-align:center;padding:12px;background:rgba(0,179,159,0.08);border-radius:8px;">
                 <div style="font-size:24px;font-weight:700;color:var(--teal);">${fmtInt(publicJoined)}</div>
-                <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">Public participants</div>
+                <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">Public challenge joins</div>
               </div>
               <div style="text-align:center;padding:12px;background:rgba(0,179,159,0.08);border-radius:8px;">
                 <div style="font-size:24px;font-weight:700;color:var(--teal);">${fmtInt(sponsoredAfterPublic.length)}</div>

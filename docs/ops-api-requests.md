@@ -144,6 +144,32 @@ Notes:
   `runRate30d` + `joinsByMonth` then light up the per-study health/momentum view;
   `demographics` + `wearable` light up the distribution charts.
 
+## 7. Participant-level study history — to make the Public → Sponsored funnel real
+
+The dashboard's **Public → Sponsored Pipeline** panel can only show **aggregate
+counts** today (public-challenge joins next to onboards in sponsored studies that
+launched later). It **cannot confirm crossover** — i.e. whether the *same* people
+who did free public challenges later enrolled in sponsored (RCT/RWE) studies —
+because the API exposes no per-participant study history.
+
+Request: expose, per participant (an anonymized/hashed ID is fine), **the studies
+they've joined / onboarded / completed, with dates** — e.g.
+
+```jsonc
+{
+  "participantId": "p_8f3a…",
+  "studies": [
+    { "experimentId": 527, "joinedAt": "2026-03-02", "onboarded": true, "completed": false },
+    { "experimentId": 549, "joinedAt": "2026-06-04", "onboarded": true, "completed": false }
+  ]
+}
+```
+
+With that, the dashboard can compute the **real** funnel: the % of public-challenge
+participants who went on to enroll in a sponsored study — the actual answer to "do
+public studies feed paid recruitment?" (Related to #3, but that item is acquisition
+*source*; this is study *history*.)
+
 ---
 
 ### Why it matters
