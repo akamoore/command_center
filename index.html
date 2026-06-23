@@ -3661,12 +3661,13 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     const key = Object.keys(PS_HEALTH).find(k => n.includes(k));
     return key ? PS_HEALTH[key] : null;
   };
-  // Public studies to HIDE from the list entirely: long-retired challenges the ops
-  // API still reports "live", plus the stale "4-7-8 Effect Extended" duplicate (the
-  // real one is "4-7-8 Effect (Extended)" with parentheses).
+  // Names to HIDE from the public list entirely: long-retired challenges the ops API
+  // still reports "live", the stale "4-7-8 Effect Extended" duplicate, and studies
+  // that aren't public challenges at all (e.g. the Essentials VEP study).
   const RETIRED_PUBLIC = [
     'track your travel', 'caffeine effect', '7 day yoga', 'the 4-7-8 effect',
-    '4-7-8 effect extended',   // stale duplicate (≠ "4-7-8 Effect (Extended)")
+    '4-7-8 effect extended',        // stale duplicate (≠ "4-7-8 Effect (Extended)")
+    'essentials nutrition shake',   // VEP study — not a public challenge
   ];
   const isRetiredPublic = name => {
     const n = (name || '').toLowerCase();
@@ -3679,7 +3680,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // API reports catalog state (doc #9), this is curated — new studies default to live.
   const OFF_CATALOG = [
     'hydration effect', 'seasonal superfoods', 'power nap', 'fasting reset',
-    'wim hof', '10k steps', 'box breathing', 'septasync', 'essentials nutrition shake',
+    'wim hof', '10k steps', 'box breathing', 'septasync',
   ];
   const isOffCatalog = name => {
     const n = (name || '').toLowerCase();
