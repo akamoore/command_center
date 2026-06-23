@@ -3661,12 +3661,29 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     const key = Object.keys(PS_HEALTH).find(k => n.includes(k));
     return key ? PS_HEALTH[key] : null;
   };
-  // Public studies switched off the participant catalog but still reported "live"
-  // by the ops API — hide from the public-studies list until the API marks them off.
-  const RETIRED_PUBLIC = ['track your travel', 'caffeine effect', '7 day yoga', 'the 4-7-8 effect'];
+  // Public studies to HIDE from the list entirely: long-retired challenges the ops
+  // API still reports "live", plus the stale "4-7-8 Effect Extended" duplicate (the
+  // real one is "4-7-8 Effect (Extended)" with parentheses).
+  const RETIRED_PUBLIC = [
+    'track your travel', 'caffeine effect', '7 day yoga', 'the 4-7-8 effect',
+    '4-7-8 effect extended',   // stale duplicate (≠ "4-7-8 Effect (Extended)")
+  ];
   const isRetiredPublic = name => {
     const n = (name || '').toLowerCase();
     return RETIRED_PUBLIC.some(r => n.includes(r));
+  };
+
+  // Studies still SHOWN but no longer live on the participant catalog (verified
+  // Jun 2026 against the in-app "Good while you wait" feed). They're displayed but
+  // marked "Off catalog" and excluded from the live count + health. Until the ops
+  // API reports catalog state (doc #9), this is curated — new studies default to live.
+  const OFF_CATALOG = [
+    'hydration effect', 'seasonal superfoods', 'power nap', 'fasting reset',
+    'wim hof', '10k steps', 'box breathing', 'septasync', 'essentials nutrition shake',
+  ];
+  const isOffCatalog = name => {
+    const n = (name || '').toLowerCase();
+    return OFF_CATALOG.some(k => n.includes(k));
   };
 
   function renderPublicStudies() {
@@ -3700,13 +3717,16 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       return 0;
     });
 
-    // Summary stats
-    const totalRecruited = publicStudies.reduce((a, s) => a + (s.joined || 0), 0);
-    const totalTarget = publicStudies.reduce((a, s) => a + (s.target || 0), 0);
-    const totalCompleted = publicStudies.reduce((a, s) => a + (s.onboarded || 0), 0);
-    const totalInStudy = publicStudies.reduce((a, s) => a + (s.inStudy || 0), 0);
-    const totalCompN = publicStudies.reduce((a, s) => a + (s.complianceN || 0), 0);
-    const totalCompD = publicStudies.reduce((a, s) => a + (s.complianceD || 0), 0);
+    // Summary stats — computed over LIVE studies only (off-catalog ones still show
+    // in the table, marked, but don't count toward the live-catalog totals).
+    const liveStudies = publicStudies.filter(s => !isOffCatalog(s.name));
+    const offCatalogCount = publicStudies.length - liveStudies.length;
+    const totalRecruited = liveStudies.reduce((a, s) => a + (s.joined || 0), 0);
+    const totalTarget = liveStudies.reduce((a, s) => a + (s.target || 0), 0);
+    const totalCompleted = liveStudies.reduce((a, s) => a + (s.onboarded || 0), 0);
+    const totalInStudy = liveStudies.reduce((a, s) => a + (s.inStudy || 0), 0);
+    const totalCompN = liveStudies.reduce((a, s) => a + (s.complianceN || 0), 0);
+    const totalCompD = liveStudies.reduce((a, s) => a + (s.complianceD || 0), 0);
     const recruitPct = totalTarget > 0 ? (totalRecruited / totalTarget * 100).toFixed(0) : 0;
     const completedPct = totalRecruited > 0 ? (totalCompleted / totalRecruited * 100).toFixed(0) : 0;
     const compliancePct = totalCompD > 0 ? (totalCompN / totalCompD * 100).toFixed(0) : 0;
@@ -3714,8 +3734,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     container.innerHTML = `
       <div class="ps-summary-grid">
         <div class="ps-summary-card">
-          <div class="ps-val">${publicStudies.length}</div>
-          <div class="ps-label">Active Studies</div>
+          <div class="ps-val">${liveStudies.length}</div>
+          <div class="ps-label">Live Studies${offCatalogCount ? ` <span style="color:var(--text-dim);font-weight:400;">· ${offCatalogCount} off catalog</span>` : ''}</div>
         </div>
         <div class="ps-summary-card">
           <div class="ps-val">${fmtInt(totalRecruited)}<span style="font-size:14px;color:var(--text-dim)">/${fmtInt(totalTarget)}</span></div>
@@ -3779,12 +3799,15 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
                 ? `<span style="font-weight:600;color:${complPct >= 90 ? 'var(--green)' : complPct >= 70 ? 'var(--yellow)' : 'var(--rose)'};">${complPct.toFixed(0)}%</span> <span style="color:var(--text-dim);">${compN}/${compD}</span>`
                 : '<span style="color:var(--text-dim);">—</span>';
 
+              const offCatalog = isOffCatalog(s.name);
               const h = psHealthFor(s.name);
-              const healthCell = h
-                ? `<span title="${esc(h.note)}" style="color:${PS_TIER[h.tier].color};font-weight:600;white-space:nowrap;">● ${PS_TIER[h.tier].label}</span>`
-                : '<span style="color:var(--text-dim);">—</span>';
+              const healthCell = offCatalog
+                ? '<span style="color:var(--text-dim);font-weight:600;white-space:nowrap;">○ Off catalog</span>'
+                : (h
+                  ? `<span title="${esc(h.note)}" style="color:${PS_TIER[h.tier].color};font-weight:600;white-space:nowrap;">● ${PS_TIER[h.tier].label}</span>`
+                  : '<span style="color:var(--text-dim);">—</span>');
 
-              return `<tr>
+              return `<tr${offCatalog ? ' style="opacity:0.5;"' : ''}>
                 <td>${esc(s.name)}</td>
                 <td>${recCell}</td>
                 <td>${inCell}</td>
@@ -3833,7 +3856,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     if (!el) return;
     const allStudies = dataService.getEnrichedStudies ? dataService.getEnrichedStudies() : STUDIES;
     const studies = allStudies.filter(s =>
-      s.type === 'PUBLIC' && s.status !== 'complete' && s.status !== 'completed' && !isRetiredPublic(s.name));
+      s.type === 'PUBLIC' && s.status !== 'complete' && s.status !== 'completed' &&
+      !isRetiredPublic(s.name) && !isOffCatalog(s.name));
     const groups = {};
     studies.forEach(s => {
       const h = psHealthFor(s.name);
