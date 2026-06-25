@@ -3,13 +3,14 @@
 What's in the handoff zip, what was deliberately left out, and the action items
 that travel with it.
 
-## Included (full repo mirror)
+## Included — Command Center dashboard only
 
-Everything in the repository: all dashboards and analytics pages, the serverless
-API + local proxies, the data pipeline scripts, the `data/*.json` feeds, all
-GitHub workflows, the sub-apps (`trending-topic-generator`, `script-generator`,
-`washout-app`), and all marketing collateral (social-post HTML + images, PDFs,
-email templates) — plus this `handoff/` migration kit.
+The Recruitment Command Center and its analytics pages, plus everything needed to
+run them: the serverless API (`api/`) + local CORS proxy (`api-proxy/`), the data
+pipeline (`scripts/refresh-stats.mjs`, `fetch-chart-data.mjs`), the `data/*.json`
+feeds, the dashboard GitHub workflows, the brand/ops docs (`CLAUDE.md`,
+`docs/ops-api-requests.md`, `.claude/skills/command-center/`), and this `handoff/`
+migration kit. See `README.md` for the page-by-page list.
 
 ## Excluded / modified (and why)
 
@@ -18,6 +19,10 @@ email templates) — plus this `handoff/` migration kit.
 | `data/master-participants.csv`, `data/all-submissions.csv`, `data/meta-leads.csv`, `data/oura-database.csv`, `data/whoop-database.csv`, `data/fitbit-database.csv`, `data/apple-watch-database.csv` | **Removed** — replaced by `handoff/migration/` (schema + templates + loader) | Real participant names + emails. Migrated into the new DB separately, not shipped in files. |
 | Hardcoded ops-API key in `index.html`, `journey.html`, `recruiting-chart.html`, `reporting.html` | **Replaced** with `YOUR_OPS_API_KEY` | Live credential that was shipped client-side; must be rotated. See MIGRATION step 1. |
 | `.git/`, `node_modules/`, `.env`, `.env*.local`, `.vercel/` | **Excluded** | History/build artifacts/secrets — not part of a clean handoff. |
+| Marketing collateral: ~80 social-post/story/carousel HTML + their `*.jpg`/`*.png`, the 2 PDFs, `images/`, report/case-study/poll pages, `weekly-email-template*.html` | **Excluded** | Brand content, not the dashboard. (This is ~94% of the original repo size.) |
+| Sub-apps: `trending-topic-generator/`, `script-generator/`, `washout-app/`, and `email-proxy/` | **Excluded** | Standalone tools, not part of the Command Center dashboard. |
+| Collateral generators: `generate-pdf.mjs`, `generate-retreat-report-pdf.mjs`, `screenshot*.mjs`, and `.github/workflows/generate-topics-cron.yml` | **Excluded** | Only used to produce the excluded collateral / sub-app content. |
+| Internal decks: `playbook.html`, `speaker-notes.html`, `team-briefing.html` | **Excluded** | Not analytics dashboards. Easy to add back if you want them. |
 
 The `data/*.json` feeds (meta-ads, appsflyer, sendgrid, recruiting) **are**
 included — they're aggregate/cached and regenerable via `scripts/refresh-stats.mjs`,
@@ -33,9 +38,9 @@ and contain no individual PII.
 
 ## Size
 
-~206 MB unzipped / ~177 MB zipped (289 files) — **~94% is marketing images** (`*.jpg`/`*.png`, ~183 MB) and PDFs (~11 MB).
-The actual dashboard code + data is only a few MB. If you only need the dashboard
-application, a code-only subset is a fraction of the size — ask and I'll cut one.
+~1.4 MB unzipped (52 files) — just the dashboard app, data feeds, and docs. The
+repo's marketing images, PDFs, and sub-apps (~205 MB) are excluded from this
+Command-Center-only package.
 
 ## Start here
 

@@ -14,18 +14,22 @@ existing dashboard setup with minimal changes — the front-end is plain HTML/JS
 
 ## What's in here
 
-| Area | Files | Notes |
-|------|-------|-------|
-| **Main dashboards** | `index.html` (Recruitment Command Center), `reporting.html`, `dashboard-guide.html` | Live KPIs, funnel, study table, spend |
-| **Analytics pages** | `segmentation.html`, `journey.html`, `recruiting-chart.html`, `nurture.html`, `lifecycle.html`, `attribution.html`, `ltv-tracker.html`, `sequences.html`, `participant-*.html`, `lifecycle-engagement.html` | Mostly self-contained; a few read from `data/` (see MIGRATION §4) |
-| **Serverless API** | `api/recruiting.js` + `vercel.json` | Proxy that adds the API key server-side and calls the operations API |
-| **Local proxies** | `api-proxy/`, `email-proxy/` | Express servers for local dev / SendGrid sending |
-| **Data pipeline** | `scripts/refresh-stats.mjs`, `fetch-chart-data.mjs` | Regenerate the `data/*.json` feeds from Meta / AppsFlyer / SendGrid / ops API |
-| **Data feeds** | `data/*.json` | Cached, regenerable. (The `data/*.csv` participant tables are **migrated separately** — see MIGRATION.) |
-| **Automation** | `.github/workflows/` | Deploy + 4 daily fetch crons |
-| **Sub-apps** | `trending-topic-generator/`, `script-generator/`, `washout-app/` | Independent tools (Vite/React + static); own deps + Anthropic keys |
-| **Brand + content** | social-post HTML + images, PDFs, `weekly-email-template*.html`, `CLAUDE.md` | Marketing collateral and brand guidelines |
-| **Migration kit** | `handoff/` (this folder) | Schema, CSV templates, import script, env reference |
+This package is the **Recruitment Command Center dashboard only** — the analytics
+app plus the data layer and config needed to run it. The repo's marketing
+collateral, the sub-apps, and the email tooling were intentionally left out
+(see `PACKAGE-MANIFEST.md` for the full excluded list).
+
+| Area | Files |
+|------|-------|
+| **Main dashboards** | `index.html` (Recruitment Command Center), `reporting.html`, `dashboard-guide.html` |
+| **Analytics pages** | `segmentation.html`, `journey.html`, `recruiting-chart.html`, `nurture.html`, `lifecycle.html`, `lifecycle-engagement.html`, `attribution.html`, `ltv-tracker.html`, `sequences.html`, `participant-filter.html`, `participant-lifecycle.html` |
+| **Serverless API** | `api/recruiting.js` + `vercel.json` — proxy that injects the API key server-side and calls the operations API |
+| **Local proxy** | `api-proxy/` — Express CORS proxy for local dev |
+| **Data pipeline** | `scripts/refresh-stats.mjs`, `fetch-chart-data.mjs` — regenerate the `data/*.json` feeds from Meta / AppsFlyer / SendGrid / ops API |
+| **Data feeds** | `data/*.json` — cached, regenerable. (The `data/*.csv` participant tables are **migrated separately** — see MIGRATION §2.) |
+| **Automation** | `.github/workflows/` — deploy + the 4 daily fetch crons |
+| **Brand + ops docs** | `CLAUDE.md`, `docs/ops-api-requests.md`, `.claude/skills/command-center/` |
+| **Migration kit** | `handoff/` (this folder) — schema, CSV templates, import script, env reference |
 
 ---
 
