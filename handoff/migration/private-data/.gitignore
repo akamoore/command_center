@@ -1,0 +1,3 @@
+# Real participant CSVs go here for the one-time import. NEVER commit them.
+*
+!.gitignore
