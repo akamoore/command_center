@@ -850,6 +850,20 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
     </div>
   </div>
 
+  <!-- 5b. Ecosystem & Gaps (public-study planning) -->
+  <div class="section" id="ecosystem-section">
+    <div class="section-toggle collapsed" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('collapsed')">
+      <h2>Ecosystem &amp; Gaps</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="section-body collapsed">
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:14px;">
+        Live participant mix for public-study planning — where the gaps are by wearable, gender, age, and ethnicity. <span style="color:var(--lime);">● GAP</span> marks the dimensions your plan is actively growing.
+      </div>
+      <div id="ecosystem-content"></div>
+    </div>
+  </div>
+
   <!-- 6. LTV & Financial (Placeholder) -->
   <div class="section" id="ltv-section">
     <div class="section-toggle collapsed" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('collapsed')">
@@ -1214,6 +1228,24 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const directUrl = PROXY_BASE
         ? `${PROXY_BASE}/api/public-studies`
         : 'https://operations.reputablehealth.net/api/public-studies';
+      const resp = await fetch(directUrl, { headers });
+      if (!resp.ok) throw new Error(`API ${resp.status}: ${resp.statusText}`);
+      return await resp.json();
+    },
+
+    async fetchDemographics(qs = '') {
+      // Live ecosystem demographics for the Ecosystem & Gaps view (same proxy pattern).
+      try {
+        const resp = await fetch('/api/demographics' + qs);
+        if (resp.ok) return await resp.json();
+        throw new Error(`Proxy ${resp.status}: ${resp.statusText}`);
+      } catch (err) {
+        console.warn('Demographics proxy unavailable, trying direct API:', err.message);
+      }
+      const headers = PROXY_BASE ? {} : { 'x-api-key': API_KEY };
+      const directUrl = (PROXY_BASE
+        ? `${PROXY_BASE}/api/demographics`
+        : 'https://operations.reputablehealth.net/api/demographics') + qs;
       const resp = await fetch(directUrl, { headers });
       if (!resp.ok) throw new Error(`API ${resp.status}: ${resp.statusText}`);
       return await resp.json();
@@ -3890,6 +3922,97 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // ============================================================
   // RENDER ALL
   // ============================================================
+  // ── Ecosystem & Gaps: live participant mix from /api/demographics, for public-
+  //    study planning (which net-new participants to recruit by ecosystem gap).
+  const ECO_DIMENSIONS = [
+    { key: 'wearable', label: 'Wearable' },
+    { key: 'gender', label: 'Gender' },
+    { key: 'age', label: 'Age' },
+    { key: 'ethnicity', label: 'Ethnicity' },
+    { key: 'income', label: 'Income' },
+  ];
+  // Buckets the plan is actively growing → flagged "GAP".
+  const ECO_PRIORITY = {
+    wearable: ['whoop_v2', 'whoop', 'apple_health_kit', 'apple_watch', 'fitbit'],
+    gender: ['male'],
+    age: ['56-65', '66+', '60+'],
+    ethnicity: ['hispanic', 'black'],
+  };
+  const ECO_WEARABLE_LABEL = { oura: 'Oura', whoop_v2: 'Whoop', whoop: 'Whoop', fitbit: 'Fitbit', garmin: 'Garmin', apple_health_kit: 'Apple Watch', apple_watch: 'Apple Watch' };
+  let ecosystemLoaded = false;
+
+  function ecoRollup(data) {
+    if (data.ecosystem && typeof data.ecosystem === 'object') return data.ecosystem;
+    // Fallback: roll the per-study marginals up to an ecosystem total.
+    const studies = Array.isArray(data.studies) ? data.studies : [];
+    const out = {};
+    ECO_DIMENSIONS.forEach(d => { out[d.key] = {}; });
+    studies.forEach(s => ECO_DIMENSIONS.forEach(d => {
+      const dist = s[d.key];
+      if (dist && typeof dist === 'object') {
+        for (const [k, v] of Object.entries(dist)) out[d.key][k] = (out[d.key][k] || 0) + (Number(v) || 0);
+      }
+    }));
+    return out;
+  }
+
+  async function renderEcosystem() {
+    const el = $('#ecosystem-content');
+    if (!el || ecosystemLoaded) return;
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Loading ecosystem demographics…</div>';
+    let data;
+    try {
+      data = await dataService.fetchDemographics();
+    } catch (err) {
+      el.innerHTML = `<div style="color:var(--text-dim);font-size:13px;">Ecosystem data unavailable — ${esc(err.message)}.</div>`;
+      return;
+    }
+    ecosystemLoaded = true;
+    const eco = ecoRollup(data);
+    const cov = data.coverage || {};
+    const sum = data.summary || {};
+    const priorityOf = (dimKey, bucket) => (ECO_PRIORITY[dimKey] || []).includes(String(bucket).toLowerCase());
+    const labelOf = (dimKey, bucket) => dimKey === 'wearable' ? (ECO_WEARABLE_LABEL[bucket] || bucket) : bucket;
+
+    const card = (dim) => {
+      const dist = eco[dim.key];
+      if (!dist || typeof dist !== 'object') return '';
+      const entries = Object.entries(dist).map(([k, v]) => [k, Number(v) || 0]);
+      const total = entries.reduce((a, [, v]) => a + v, 0);
+      if (!total) return '';
+      entries.sort((a, b) => (a[0] === 'Unknown' ? 1 : b[0] === 'Unknown' ? -1 : b[1] - a[1]));
+      const covPct = cov[dim.key] != null ? Math.round(cov[dim.key] * 100) : null;
+      const rows = entries.map(([bucket, n]) => {
+        const pct = total ? n / total * 100 : 0;
+        const prio = priorityOf(dim.key, bucket);
+        const isUnknown = bucket === 'Unknown';
+        const barColor = prio ? 'var(--lime)' : isUnknown ? 'rgba(255,255,255,0.15)' : 'var(--teal)';
+        return `<div style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
+            <span style="color:${isUnknown ? 'var(--text-dim)' : 'var(--text)'};">${prio ? '<span style="color:var(--lime);">● </span>' : ''}${esc(labelOf(dim.key, bucket))}${prio ? ' <span style="color:var(--lime);font-size:9px;font-weight:800;letter-spacing:0.06em;">GAP</span>' : ''}</span>
+            <span style="color:var(--text-dim);">${fmtInt(n)} · ${pct.toFixed(0)}%</span>
+          </div>
+          <div class="ps-bar" style="width:100%;"><div class="ps-bar-fill" style="width:${Math.min(pct, 100)}%;background:${barColor};"></div></div>
+        </div>`;
+      }).join('');
+      return `<div class="ps-chart-card" style="padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
+          <h3 style="margin:0;font-size:14px;">${dim.label}</h3>
+          ${covPct != null ? `<span style="font-size:10px;color:var(--text-dim);">${covPct}% known</span>` : ''}
+        </div>${rows}</div>`;
+    };
+
+    const cards = ECO_DIMENSIONS.map(card).filter(Boolean).join('');
+    el.innerHTML = `
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--text-dim);">
+        <span><strong style="color:var(--text);">${fmtInt(sum.distinctParticipants || 0)}</strong> distinct participants</span>
+        <span><strong style="color:var(--text);">${fmtInt(sum.totalParticipations || 0)}</strong> participations</span>
+        <span><strong style="color:var(--text);">${fmtInt(sum.totalStudies || 0)}</strong> studies</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px;">Counts are <em>participations</em> (a person counts once per study); wearable is study-specific. Live from <code style="color:var(--text-secondary);">/api/demographics</code> · ecosystem = Public + Clinical + Products.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">${cards}</div>`;
+  }
+
   function renderAll() {
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -3915,6 +4038,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     renderManualImpact();
     renderPublicStudies();
     renderPublicStudyHealth();
+    renderEcosystem();
     renderSourceStatus();
 
     $('#footer').textContent = `Recruitment Command Center · Reputable Health · Last refreshed ${dateStr} ${timeStr}`;
