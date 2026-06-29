@@ -882,7 +882,7 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
           <li><strong style="color:var(--text);">Men are a category gap, not a study gap.</strong> Wellness challenges run ~30% male regardless; only energy-drink / sports formats (e.g. Celsius) break out.</li>
           <li><strong style="color:var(--text);">Whoop moves slowly here.</strong> It barely over-indexes in public studies — Whoop users concentrate in recovery/clinical studies, so expect gradual gains.</li>
           <li><strong style="color:var(--text);">Ethnicity &amp; 60+ have no silver bullet.</strong> Short, low-friction sleep / stress / breathwork formats (Power Nap, Gratitude, 4-7-8, Yoga) over-index for Hispanic &amp; Black, but only modestly.</li>
-          <li><strong style="color:var(--text);">Mind the denominators.</strong> The biggest N&times; sit on tiny samples — use them to choose the <em>theme</em>, then drive volume with momentum (see the plan).</li>
+          <li><strong style="color:var(--text);">Quality-check before you clone.</strong> Big N&times; often sit on tiny samples — and each study&rsquo;s trailing % is its completion rate, so favor formats that over-index <em>and</em> retain (<span style="color:#34D399;">green ≥55%</span>) over ones that leak.</li>
         </ul>
       </div>
       <div id="gap-studies-content"></div>
@@ -3966,6 +3966,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   let ecosystemLoaded = false;
   let ecoData = null;        // cached /api/demographics payload
   let ecoScope = 'all';      // 'all' | 'public' | <study id>
+  let gapCompletion = null;  // study id/name → completionRate (from /api/public-studies), for the Gap cross-tab
 
   function ecoRollup(studies) {
     // Roll the per-study marginals up to a single total for the given studies.
@@ -4103,6 +4104,19 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       sel.addEventListener('change', () => { ecoScope = sel.value; ecoRenderCards(ecoScope); });
     }
     ecoRenderCards(ecoScope);
+    // Completion rates for the Gap → Top Studies retention figure come from the
+    // public-studies feed — fetch once, key by id and name, then render the cross-tab.
+    try {
+      const ps = await dataService.fetchPublicStudies();
+      const cm = {};
+      ((ps && ps.studies) || []).forEach(s => {
+        if (!s || s.completionRate == null) return;
+        const cr = Number(s.completionRate);
+        if (s.id != null) cm['#' + s.id] = cr;
+        if (s.name) cm[String(s.name).toLowerCase()] = cr;
+      });
+      gapCompletion = cm;
+    } catch (e) { gapCompletion = null; }
     renderGapStudies();
   }
 
@@ -4150,14 +4164,24 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         const kt = gapKnown(dist);
         if (kt < GAP_FLOOR) return null;
         const c = gapCount(dist, g.buckets);
-        return { name: s.name, c, kt, share: c / kt, idx: baseShare ? (c / kt) / baseShare : 0 };
+        return { id: s.id, name: s.name, c, kt, share: c / kt, idx: baseShare ? (c / kt) / baseShare : 0 };
       }).filter(Boolean).sort((a, b) => b.share - a.share).slice(0, 5);
 
+      const compFor = (r) => {
+        if (!gapCompletion) return null;
+        const byId = gapCompletion['#' + r.id];
+        if (byId != null) return byId;
+        const byName = gapCompletion[String(r.name).toLowerCase()];
+        return byName != null ? byName : null;
+      };
       const rowHtml = rows.length ? rows.map(r => {
         const strong = r.idx >= 1.4;
+        const comp = compFor(r);
+        const compColor = comp == null ? 'var(--text-dim)' : comp >= 55 ? '#34D399' : comp >= 35 ? '#FBBF24' : '#FB7185';
+        const compHtml = comp == null ? '' : ` · <span style="color:${compColor};">${Math.round(comp)}%</span>`;
         return `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12px;margin-bottom:5px;">
           <span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.name)}</span>
-          <span style="color:var(--text-dim);white-space:nowrap;">${(r.share * 100).toFixed(0)}% <span style="color:var(--text-secondary);">(${r.c}/${r.kt})</span> <span style="color:${strong ? 'var(--lime)' : 'var(--text-dim)'};font-weight:${strong ? '700' : '400'};">${r.idx.toFixed(1)}×</span></span>
+          <span style="color:var(--text-dim);white-space:nowrap;">${(r.share * 100).toFixed(0)}% <span style="color:var(--text-secondary);">(${r.c}/${r.kt})</span> <span style="color:${strong ? 'var(--lime)' : 'var(--text-dim)'};font-weight:${strong ? '700' : '400'};">${r.idx.toFixed(1)}×</span>${compHtml}</span>
         </div>`;
       }).join('') : '<div style="color:var(--text-dim);font-size:12px;">No public study clears the sample floor.</div>';
 
@@ -4170,7 +4194,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
 
     el.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">${cards}</div>
-      <div style="font-size:11px;color:var(--text-dim);margin-top:14px;">Public studies only · min ${GAP_FLOOR} known in the dimension · share = % of that study&rsquo;s known participants · <span style="color:var(--lime);">N×</span> = vs ecosystem baseline (≥1.4× highlighted). Rare segments are small-N and ethnicity coverage is ~74% — treat as directional. Cross-reference momentum on the plan.</div>`;
+      <div style="font-size:11px;color:var(--text-dim);margin-top:14px;">Public studies only · min ${GAP_FLOOR} known · share = % of the study&rsquo;s known participants · <span style="color:var(--lime);">N×</span> = vs ecosystem baseline (≥1.4× highlighted) · trailing % = <span style="color:#34D399;">completion</span> (green ≥55% retains · amber 35–55 · red &lt;35). Rare segments are small-N and ethnicity coverage ~74% — directional. Favor formats that over-index <strong>and</strong> retain.</div>`;
   }
 
   function renderAll() {
