@@ -858,7 +858,7 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
     </div>
     <div class="section-body collapsed">
       <div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:14px;">
-        Live participant mix for public-study planning — where the gaps are by wearable, gender, age, and ethnicity. <span style="color:var(--lime);">● GAP</span> marks the dimensions your plan is actively growing.
+        Live participant mix for public-study planning — gaps by wearable, gender, age, and ethnicity. Use the <strong style="color:var(--text-secondary);">View</strong> selector to switch between the whole ecosystem, public studies only, or any single study. <span style="color:var(--lime);">● GAP</span> marks the dimensions your plan is actively growing.
       </div>
       <div id="ecosystem-content"></div>
     </div>
@@ -3940,14 +3940,14 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   };
   const ECO_WEARABLE_LABEL = { oura: 'Oura', whoop_v2: 'Whoop', whoop: 'Whoop', fitbit: 'Fitbit', garmin: 'Garmin', apple_health_kit: 'Apple Watch', apple_watch: 'Apple Watch' };
   let ecosystemLoaded = false;
+  let ecoData = null;        // cached /api/demographics payload
+  let ecoScope = 'all';      // 'all' | 'public' | <study id>
 
-  function ecoRollup(data) {
-    if (data.ecosystem && typeof data.ecosystem === 'object') return data.ecosystem;
-    // Fallback: roll the per-study marginals up to an ecosystem total.
-    const studies = Array.isArray(data.studies) ? data.studies : [];
+  function ecoRollup(studies) {
+    // Roll the per-study marginals up to a single total for the given studies.
     const out = {};
     ECO_DIMENSIONS.forEach(d => { out[d.key] = {}; });
-    studies.forEach(s => ECO_DIMENSIONS.forEach(d => {
+    (studies || []).forEach(s => ECO_DIMENSIONS.forEach(d => {
       const dist = s[d.key];
       if (dist && typeof dist === 'object') {
         for (const [k, v] of Object.entries(dist)) out[d.key][k] = (out[d.key][k] || 0) + (Number(v) || 0);
@@ -3956,21 +3956,18 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return out;
   }
 
-  async function renderEcosystem() {
-    const el = $('#ecosystem-content');
-    if (!el || ecosystemLoaded) return;
-    el.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Loading ecosystem demographics…</div>';
-    let data;
-    try {
-      data = await dataService.fetchDemographics();
-    } catch (err) {
-      el.innerHTML = `<div style="color:var(--text-dim);font-size:13px;">Ecosystem data unavailable — ${esc(err.message)}.</div>`;
-      return;
-    }
-    ecosystemLoaded = true;
-    const eco = ecoRollup(data);
-    const cov = data.coverage || {};
-    const sum = data.summary || {};
+  function ecoStudiesForScope(scope) {
+    const all = Array.isArray(ecoData && ecoData.studies) ? ecoData.studies : [];
+    if (scope === 'public') return all.filter(s => String(s.type || '').toLowerCase() === 'public');
+    if (scope === 'all') return all;
+    return all.filter(s => String(s.id) === String(scope));   // a single study, by id
+  }
+
+  function ecoRenderCards(scope) {
+    const host = $('#eco-cards');
+    if (!host) return;
+    const studies = ecoStudiesForScope(scope);
+    const eco = ecoRollup(studies);
     const priorityOf = (dimKey, bucket) => (ECO_PRIORITY[dimKey] || []).includes(String(bucket).toLowerCase());
     const labelOf = (dimKey, bucket) => dimKey === 'wearable' ? (ECO_WEARABLE_LABEL[bucket] || bucket) : bucket;
 
@@ -3981,7 +3978,6 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const total = entries.reduce((a, [, v]) => a + v, 0);
       if (!total) return '';
       entries.sort((a, b) => (a[0] === 'Unknown' ? 1 : b[0] === 'Unknown' ? -1 : b[1] - a[1]));
-      const covPct = cov[dim.key] != null ? Math.round(cov[dim.key] * 100) : null;
       const rows = entries.map(([bucket, n]) => {
         const pct = total ? n / total * 100 : 0;
         const prio = priorityOf(dim.key, bucket);
@@ -3998,19 +3994,87 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       return `<div class="ps-chart-card" style="padding:16px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
           <h3 style="margin:0;font-size:14px;">${dim.label}</h3>
-          ${covPct != null ? `<span style="font-size:10px;color:var(--text-dim);">${covPct}% known</span>` : ''}
         </div>${rows}</div>`;
     };
 
     const cards = ECO_DIMENSIONS.map(card).filter(Boolean).join('');
+
+    // Header counts adapt to the selected scope.
+    let headParts;
+    if (scope === 'all') {
+      const sum = (ecoData && ecoData.summary) || {};
+      headParts = [
+        `<strong style="color:var(--text);">${fmtInt(sum.distinctParticipants || 0)}</strong> distinct participants`,
+        `<strong style="color:var(--text);">${fmtInt(sum.totalParticipations || 0)}</strong> participations`,
+        `<strong style="color:var(--text);">${fmtInt(sum.totalStudies || studies.length)}</strong> studies`,
+      ];
+    } else if (scope === 'public') {
+      const participations = studies.reduce((a, s) => a + (Number(s.participants) || 0), 0);
+      headParts = [
+        `<strong style="color:var(--text);">${fmtInt(participations)}</strong> participations`,
+        `<strong style="color:var(--text);">${studies.length}</strong> public studies`,
+      ];
+    } else {
+      const s = studies[0];
+      headParts = s ? [
+        `<strong style="color:var(--text);">${esc(s.name || ('Study ' + s.id))}</strong>`,
+        `${esc(s.type || 'Study')}`,
+        `<strong style="color:var(--text);">${fmtInt(Number(s.participants) || 0)}</strong> participants`,
+      ] : ['Study not found'];
+    }
+
+    const note = scope === 'all'
+      ? 'Whole participant base — Public + Clinical + Self-Serve. Counts are <em>participations</em> (a person counts once per study).'
+      : scope === 'public'
+      ? 'Public / community challenges only. Counts are <em>participations</em> (a person counts once per study).'
+      : 'Single study — bars show this study&rsquo;s own participant mix.';
+
+    host.innerHTML = `
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--text-dim);">${headParts.map(p => `<span>${p}</span>`).join('')}</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px;">${note} Live from <code style="color:var(--text-secondary);">/api/demographics</code>.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">${cards || '<div style="color:var(--text-dim);font-size:13px;">No demographic breakdown reported for this selection.</div>'}</div>`;
+  }
+
+  async function renderEcosystem() {
+    const el = $('#ecosystem-content');
+    if (!el || ecosystemLoaded) return;
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Loading ecosystem demographics…</div>';
+    try {
+      ecoData = await dataService.fetchDemographics();
+    } catch (err) {
+      el.innerHTML = `<div style="color:var(--text-dim);font-size:13px;">Ecosystem data unavailable — ${esc(err.message)}.</div>`;
+      return;
+    }
+    ecosystemLoaded = true;
+
+    // Build the View selector: All / Public-only, then every study grouped by type.
+    const studies = Array.isArray(ecoData.studies) ? ecoData.studies : [];
+    const byType = {};
+    studies.forEach(s => { const t = s.type || 'Other'; (byType[t] = byType[t] || []).push(s); });
+    const typeOrder = Object.keys(byType).sort((a, b) => a === 'Public' ? -1 : b === 'Public' ? 1 : a.localeCompare(b));
+    const optgroups = typeOrder.map(t => {
+      const opts = byType[t].slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
+        .map(s => `<option value="${esc(String(s.id))}">${esc(s.name || ('Study ' + s.id))} · ${fmtInt(Number(s.participants) || 0)}</option>`).join('');
+      return `<optgroup label="${esc(t)}">${opts}</optgroup>`;
+    }).join('');
+
     el.innerHTML = `
-      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--text-dim);">
-        <span><strong style="color:var(--text);">${fmtInt(sum.distinctParticipants || 0)}</strong> distinct participants</span>
-        <span><strong style="color:var(--text);">${fmtInt(sum.totalParticipations || 0)}</strong> participations</span>
-        <span><strong style="color:var(--text);">${fmtInt(sum.totalStudies || 0)}</strong> studies</span>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+        <label for="eco-scope" style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">View</label>
+        <select id="eco-scope" style="background:var(--bg-raised);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:13px;max-width:360px;">
+          <option value="all">All studies — ecosystem</option>
+          <option value="public">Public studies only</option>
+          ${optgroups}
+        </select>
       </div>
-      <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px;">Counts are <em>participations</em> (a person counts once per study); wearable is study-specific. Live from <code style="color:var(--text-secondary);">/api/demographics</code> · ecosystem = Public + Clinical + Products.</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">${cards}</div>`;
+      <div id="eco-cards"></div>`;
+
+    const sel = $('#eco-scope');
+    if (sel) {
+      sel.value = ecoScope;
+      sel.addEventListener('change', () => { ecoScope = sel.value; ecoRenderCards(ecoScope); });
+    }
+    ecoRenderCards(ecoScope);
   }
 
   function renderAll() {
