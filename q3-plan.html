@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q3 Public Study Plan · Reputable Health</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<style>
+  :root{
+    --bg-body:#0a0a0a; --bg-surface:#1a1a1a; --bg-raised:#141414;
+    --lime:#C8E64A; --lime-light:#D9FF85; --charcoal:#222220;
+    --text:#ffffff; --text-muted:#999999; --text-secondary:#a0a0a0;
+    --border:rgba(255,255,255,0.08);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg-body); color:var(--text-secondary);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.6;
+  }
+  .wrap{max-width:920px; margin:0 auto; padding:clamp(1rem,5vw,2rem);}
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    padding:16px 0; border-bottom:1px solid var(--border); margin-bottom:30px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:10px; font-weight:700; color:var(--text); font-size:14px; letter-spacing:0.01em;}
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--lime); box-shadow:0 0 10px rgba(200,230,74,0.5);}
+  .back{
+    color:var(--lime); text-decoration:none; font-size:13px; font-weight:600;
+    border:1px solid rgba(200,230,74,0.35); padding:8px 16px; border-radius:100px; white-space:nowrap;
+    transition:background .2s ease;
+  }
+  .back:hover{background:rgba(200,230,74,0.08);}
+  #doc h1{font-size:clamp(1.7rem,4vw,2.3rem); color:var(--text); line-height:1.2; margin:0 0 10px; font-weight:700;}
+  #doc h2{font-size:1.4rem; color:var(--text); margin:38px 0 14px; padding-top:20px; border-top:1px solid var(--border); font-weight:600;}
+  #doc h3{font-size:1.08rem; color:var(--lime-light); margin:26px 0 8px; font-weight:600;}
+  #doc p,#doc li{color:var(--text-secondary); font-size:15px;}
+  #doc li{margin-bottom:5px;}
+  #doc a{color:var(--lime); text-decoration:none; border-bottom:1px solid rgba(200,230,74,0.3);}
+  #doc a:hover{border-bottom-color:var(--lime);}
+  #doc strong{color:var(--text); font-weight:600;}
+  #doc em{color:var(--text-muted); font-style:italic;}
+  #doc code{background:var(--bg-surface); color:var(--lime-light); padding:2px 7px; border-radius:6px; font-size:13px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  #doc blockquote{
+    border-left:3px solid rgba(200,230,74,0.45); margin:18px 0; padding:6px 18px;
+    color:var(--text-muted); background:rgba(200,230,74,0.04); border-radius:0 10px 10px 0;
+  }
+  #doc table{width:100%; border-collapse:collapse; margin:18px 0; font-size:13px; display:block; overflow-x:auto;}
+  #doc th{text-align:left; color:var(--lime); font-size:10.5px; text-transform:uppercase; letter-spacing:0.07em; font-weight:700; padding:10px 12px; border-bottom:1px solid var(--border); white-space:nowrap;}
+  #doc td{padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text-secondary); vertical-align:top;}
+  #doc tr:hover td{background:rgba(255,255,255,0.02);}
+  #doc hr{border:none; border-top:1px solid var(--border); margin:30px 0;}
+  .status{font-size:14px; color:var(--text-muted); padding:40px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span> Reputable Health · Recruitment Command Center</div>
+    <a class="back" href="./index.html">&larr; Back to dashboard</a>
+  </div>
+  <div id="doc"><p class="status">Loading the Q3 plan&hellip;</p></div>
+</div>
+<script>
+  (async function () {
+    var el = document.getElementById('doc');
+    try {
+      var resp = await fetch('./docs/public-study-q3-plan.md', { cache: 'no-cache' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var md = await resp.text();
+      if (typeof marked === 'undefined') {
+        // Markdown renderer didn't load — show the raw text so it's still readable on-page.
+        el.innerHTML = '<pre style="white-space:pre-wrap;color:var(--text-secondary);font-size:13px;">' +
+          md.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }) + '</pre>';
+        return;
+      }
+      el.innerHTML = marked.parse(md);
+    } catch (e) {
+      el.innerHTML = '<p class="status">Couldn&rsquo;t load the plan here (' + e.message + '). ' +
+        'View it on <a style="color:var(--lime);" href="https://github.com/akamoore/command_center/blob/main/docs/public-study-q3-plan.md">GitHub</a> instead.</p>';
+    }
+  })();
+</script>
+</body>
+</html>
