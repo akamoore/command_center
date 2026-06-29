@@ -864,6 +864,20 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
     </div>
   </div>
 
+  <!-- 5c. Gap → Top Studies (where to recruit each priority gap) -->
+  <div class="section" id="gap-studies-section">
+    <div class="section-toggle collapsed" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('collapsed')">
+      <h2>Gap &rarr; Top Studies</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="section-body collapsed">
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:14px;">
+        For each priority gap, the public studies that <strong style="color:var(--text-secondary);">over-index</strong> on it — i.e. which formats to clone or relaunch to recruit that segment. Share is % of the study&rsquo;s known participants; <strong style="color:var(--lime);">N&times;</strong> is multiples of the ecosystem baseline.
+      </div>
+      <div id="gap-studies-content"></div>
+    </div>
+  </div>
+
   <!-- 6. LTV & Financial (Placeholder) -->
   <div class="section" id="ltv-section">
     <div class="section-toggle collapsed" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('collapsed')">
@@ -4078,6 +4092,74 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       sel.addEventListener('change', () => { ecoScope = sel.value; ecoRenderCards(ecoScope); });
     }
     ecoRenderCards(ecoScope);
+    renderGapStudies();
+  }
+
+  // ── Gap → Top Studies cross-tab (where to recruit each priority gap) ──
+  const GAP_TARGETS = [
+    { label: 'WHOOP',       dim: 'wearable',  buckets: ['whoop_v2'] },
+    { label: 'Apple Watch', dim: 'wearable',  buckets: ['apple_health_kit'] },
+    { label: 'Fitbit',      dim: 'wearable',  buckets: ['fitbit'] },
+    { label: 'Garmin',      dim: 'wearable',  buckets: ['garmin'] },
+    { label: 'Male',        dim: 'gender',    buckets: ['Male'] },
+    { label: 'Age 56+',     dim: 'age',       buckets: ['56-65', '66+'] },
+    { label: 'Hispanic',    dim: 'ethnicity', buckets: ['Hispanic or Latino'] },
+    { label: 'Black',       dim: 'ethnicity', buckets: ['Black or African American'] },
+  ];
+  const GAP_EXCL = ['Unknown', 'Prefer Not To State', 'Prefer not to say'];
+  const GAP_FLOOR = 20;  // min known-in-dimension for a study to qualify (filters small-sample noise)
+
+  function gapKnown(dist) {
+    let t = 0;
+    for (const k in dist) { if (!GAP_EXCL.includes(k)) t += Number(dist[k]) || 0; }
+    return t;
+  }
+  function gapCount(dist, buckets) {
+    let c = 0;
+    for (const b of buckets) c += Number(dist[b]) || 0;
+    return c;
+  }
+
+  function renderGapStudies() {
+    const el = $('#gap-studies-content');
+    if (!el) return;
+    if (!ecoData || !Array.isArray(ecoData.studies)) {
+      el.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Gap data unavailable.</div>';
+      return;
+    }
+    const pub = ecoData.studies.filter(s => String(s.type || '').toLowerCase() === 'public');
+    const eco = ecoRollup(ecoData.studies);  // ecosystem rollup → per-gap baselines
+
+    const cards = GAP_TARGETS.map(g => {
+      const baseDist = eco[g.dim] || {};
+      const baseKnown = gapKnown(baseDist);
+      const baseShare = baseKnown ? gapCount(baseDist, g.buckets) / baseKnown : 0;
+      const rows = pub.map(s => {
+        const dist = s[g.dim] || {};
+        const kt = gapKnown(dist);
+        if (kt < GAP_FLOOR) return null;
+        const c = gapCount(dist, g.buckets);
+        return { name: s.name, c, kt, share: c / kt, idx: baseShare ? (c / kt) / baseShare : 0 };
+      }).filter(Boolean).sort((a, b) => b.share - a.share).slice(0, 5);
+
+      const rowHtml = rows.length ? rows.map(r => {
+        const strong = r.idx >= 1.4;
+        return `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12px;margin-bottom:5px;">
+          <span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.name)}</span>
+          <span style="color:var(--text-dim);white-space:nowrap;">${(r.share * 100).toFixed(0)}% <span style="color:var(--text-secondary);">(${r.c}/${r.kt})</span> <span style="color:${strong ? 'var(--lime)' : 'var(--text-dim)'};font-weight:${strong ? '700' : '400'};">${r.idx.toFixed(1)}×</span></span>
+        </div>`;
+      }).join('') : '<div style="color:var(--text-dim);font-size:12px;">No public study clears the sample floor.</div>';
+
+      return `<div class="ps-chart-card" style="padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+          <h3 style="margin:0;font-size:14px;">${esc(g.label)}</h3>
+          <span style="font-size:10px;color:var(--text-dim);">base ${(baseShare * 100).toFixed(1)}%</span>
+        </div>${rowHtml}</div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">${cards}</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:14px;">Public studies only · min ${GAP_FLOOR} known in the dimension · share = % of that study&rsquo;s known participants · <span style="color:var(--lime);">N×</span> = vs ecosystem baseline (≥1.4× highlighted). Rare segments are small-N and ethnicity coverage is ~74% — treat as directional. Cross-reference momentum on the plan.</div>`;
   }
 
   function renderAll() {
