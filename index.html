@@ -4072,14 +4072,14 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     if (scope === 'all') {
       const sum = (ecoData && ecoData.summary) || {};
       headParts = [
-        `<strong style="color:var(--text);">${fmtInt(sum.distinctParticipants || 0)}</strong> distinct participants`,
-        `<strong style="color:var(--text);">${fmtInt(sum.totalParticipations || 0)}</strong> participations`,
+        `<strong style="color:var(--text);">${fmtInt(sum.distinctParticipants || 0)}</strong> people joined &ge;1 study`,
+        `<strong style="color:var(--text);">${fmtInt(sum.totalParticipations || 0)}</strong> study-join events`,
         `<strong style="color:var(--text);">${fmtInt(sum.totalStudies || studies.length)}</strong> studies`,
       ];
     } else if (scope === 'public') {
       const participations = studies.reduce((a, s) => a + (Number(s.participants) || 0), 0);
       headParts = [
-        `<strong style="color:var(--text);">${fmtInt(participations)}</strong> participations`,
+        `<strong style="color:var(--text);">${fmtInt(participations)}</strong> study-join events`,
         `<strong style="color:var(--text);">${studies.length}</strong> public studies`,
       ];
     } else {
@@ -4092,14 +4092,42 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     }
 
     const note = scope === 'all'
-      ? 'Whole participant base — Public + Clinical + Self-Serve. Counts are <em>participations</em> (a person counts once per study).'
+      ? 'Whole participant base — Public + Clinical + Self-Serve. The headline count is <em>distinct people</em>; the bars below count <em>study-join events</em> (a person counts once per study they joined).'
       : scope === 'public'
-      ? 'Public / community challenges only. Counts are <em>participations</em> (a person counts once per study).'
+      ? 'Public / community challenges only. Bars count <em>study-join events</em> (a person counts once per study they joined).'
       : 'Single study — bars show this study&rsquo;s own participant mix.';
+
+    // Honest joined-vs-completed split (whole-ecosystem view only). We can report
+    // who joined, but the feed has no distinct-completer count, so the split stays
+    // explicitly "Unavailable" rather than estimated.
+    const ecoSum = (ecoData && ecoData.summary) || {};
+    const breakdown = scope === 'all' ? `
+      <div style="margin-bottom:18px;padding:16px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border-dark);border-radius:12px;">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:14px;">Joined vs. completed</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;">
+          <div>
+            <div style="font-size:28px;font-weight:700;color:var(--lime);line-height:1;">${fmtInt(ecoSum.distinctParticipants || 0)}</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:5px;">people joined &ge;1 study</div>
+          </div>
+          <div>
+            <div style="font-size:22px;font-weight:700;color:var(--text-dim);line-height:1.1;">Unavailable</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:5px;">completed &ge;1 study</div>
+          </div>
+          <div>
+            <div style="font-size:22px;font-weight:700;color:var(--text-dim);line-height:1.1;">Unavailable</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:5px;">joined, never completed</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:14px;line-height:1.55;">
+          The demographics feed reports <strong style="color:var(--text-secondary);">who joined</strong>, not who finished. Splitting joiners from completers needs a
+          <code style="color:var(--text-secondary);">distinctCompleters</code> count (distinct people who completed &ge;1 study) from the data team — until that exists the completion split is left blank, not estimated.
+        </div>
+      </div>` : '';
 
     host.innerHTML = `
       <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--text-dim);">${headParts.map(p => `<span>${p}</span>`).join('')}</div>
       <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px;">${note} Live from <code style="color:var(--text-secondary);">/api/demographics</code>.</div>
+      ${breakdown}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">${cards || '<div style="color:var(--text-dim);font-size:13px;">No demographic breakdown reported for this selection.</div>'}</div>`;
   }
 
