@@ -17,7 +17,43 @@ Mackenzie before committing.
 
 ---
 
-## 1. Where the gaps are today
+> **⚠️ Under revision — wearable-first model (post-Pankaj review).** Targets are now set
+> **per wearable only**; demographics (male, 56+, Hispanic, …) become **derived outputs**,
+> not commitments. All counts below come from a feed under **data-integrity review**
+> (`ops-api-requests.md`) — **treat every number as pending verification.** Sections 1–8 are
+> retained as supporting analysis / projected outcomes.
+
+## 0. Q3 approach — wearable-first (current model)
+
+**One primary factor: the wearable.** The old plan chased too many demographic dimensions at
+once. We now set targets by wearable and let the demographic mix fall out of each wearable's
+internal composition — e.g. if ~70% of WHOOP users are male, a WHOOP push recruits men without
+targeting men directly.
+
+### Wearable targets — the only numbers anyone is held to
+
+| Wearable | Today *(pending fix)* | Q3 target | Notes |
+|---|---|---|---|
+| **WHOOP** | ~441–449 | **1,000** | The priority build. Small pool — don't deplete it for WHOOP clinicals. |
+| **Apple Watch** | ~114 | **500** base · **1,000** stretch | Should recruit easier than WHOOP — hence the stretch. |
+| **Fitbit** | ~56 | optional | Include only if we commit to supporting it. |
+| **Oura** | ~4,500 | maintain | Already dominant — sufficient. |
+
+**The 500-or-10% floor:** any wearable we support should sit at **≥ ~500 people or ~10% of the
+total ecosystem** — below that there isn't enough of that population to run anything meaningful.
+
+### Demographics are derived, not targeted
+
+The male / Hispanic / Black / 56+ numbers in §1 and §8 are now **projected outcomes** of hitting
+the wearable targets — **not** goals anyone is measured against. Once Manpreet exposes the
+**wearable × demographic cross-section** (today's feed has per-study marginals only — see
+`ops-api-requests.md`), we replace these estimates with: *"add N to wearable X at its real
+internal mix → here's the resulting demographic shift."* Older-age figures use the API's real
+**56–65 / 66+** buckets (no proxy).
+
+---
+
+## 1. Supporting analysis — demographic gaps today *(derived)*
 
 Ecosystem baselines, as **share of *known*** (excludes "Unknown"/"Prefer not to say").
 
@@ -29,12 +65,12 @@ Ecosystem baselines, as **share of *known*** (excludes "Unknown"/"Prefer not to 
 | Garmin *(4th wearable)* | 0.8% | **+20** | Endurance/discipline streaks (yoga, Wim Hof, Gratitude) |
 | Oura | 87.1% | maintain | Sufficient — low priority |
 | Gender (male) | 29.4% | **+175** | ⚡ Energy-drink + sports only; wellness won't move it |
-| Age (60+) | ~11.6%* | **+50** | Gentle nature / nutrition / reading |
+| Age 56+ | ~11.6% | **+50** | Gentle nature / nutrition / reading |
 | Ethnicity (Hispanic) | 10.3% | **+60** | Gratitude, Dry Week, Cold Shower, Power Nap |
 | Ethnicity (Black) | 4.5% | **+45** | 30-Min Reset, 14 Day Yoga, Box Breathing, Power Nap (small base, 74% coverage — directional) |
 | *(Income — out)* | — | — | >$100k is ~57% of known income (affluent-skewed); not a priority dimension |
 
-*\*56+ proxy; the API buckets at 56–65 / 66+. Income left out of the gap table per plan decision.*
+*Age shown as **56+** — the API's real 56–65 / 66+ buckets combined; no proxy. Income left out of the gap table per plan decision.*
 
 **Coverage** (how much of each dimension is known): wearable 86% · gender 90% · age 90% · ethnicity **74%** · income 72%.
 
@@ -407,7 +443,7 @@ ethnicity — consistent with "organic carries the targets, paid is a top-up."
   are robust but absolute head-counts need the cohort de-dup (a standing plan
   dependency). Use the **% shares** as your TODAY values.
 - **Ethnicity coverage is only 74%** — Hispanic/Black signals are the noisiest.
-- **"60+" is a proxy** (56+); the API buckets at 56–65 / 66+. A true 60+ cut needs
-  finer bucketing from Manpreet.
+- **Age is shown as 56+** (the API's real 56–65 / 66+ buckets) — no proxy. A finer 60+ cut
+  would need narrower bucketing from Manpreet.
 - **Small-N over-indexers:** the biggest `N×` sit on tiny samples — use them to
   choose the theme, then drive volume with momentum + completion.
