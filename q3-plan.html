@@ -78,6 +78,20 @@
   #doc td{padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text-secondary); vertical-align:top;}
   #doc tr:hover td{background:rgba(255,255,255,0.02);}
   #doc hr{border:none; border-top:1px solid var(--border); margin:30px 0;}
+  /* collapsible sections (accordion) */
+  #doc details.sec{border-top:1px solid var(--border);}
+  #doc details.sec:last-of-type{border-bottom:1px solid var(--border);}
+  #doc details.sec > summary{
+    list-style:none; cursor:pointer; font-size:1.2rem; color:var(--text); font-weight:600;
+    padding:18px 2px; display:flex; align-items:center; justify-content:space-between; gap:14px;
+  }
+  #doc details.sec > summary::-webkit-details-marker{display:none;}
+  #doc details.sec > summary::after{content:'⌄'; color:var(--lime); font-size:1.4rem; line-height:1; transition:transform .2s ease;}
+  #doc details.sec[open] > summary::after{transform:rotate(180deg);}
+  #doc details.sec > summary:hover{color:var(--lime);}
+  #doc .sec-body{padding:2px 2px 16px;}
+  #doc details.sec .sec-body > *:first-child{margin-top:0;}
+  #doc details.sec h2{display:none;}
   .status{font-size:14px; color:var(--text-muted); padding:40px 0;}
 </style>
 </head>
@@ -196,13 +210,34 @@
         return;
       }
       el.innerHTML = marked.parse(md);
-      // Build the section nav from the rendered headings.
+      // Collapse each H2 section into an accordion so the page stays short —
+      // detail is one click away, charts above carry the at-a-glance.
       var toc = document.getElementById('toc');
-      var heads = el.querySelectorAll('h2');
-      heads.forEach(function (h, i) {
-        var id = 'sec-' + i; h.id = id;
+      var kids = Array.prototype.slice.call(el.childNodes);
+      var secs = [], cur = null;
+      kids.forEach(function (node) {
+        if (node.nodeType === 1 && node.tagName === 'H2') { cur = { head: node, body: [] }; secs.push(cur); }
+        else if (cur) { cur.body.push(node); }
+      });
+      secs.forEach(function (sec, i) {
+        var details = document.createElement('details');
+        details.className = 'sec'; details.id = 'sec-' + i;
+        if (i === 0) details.open = true; // first section open as an anchor
+        var summary = document.createElement('summary');
+        summary.innerHTML = sec.head.innerHTML;
+        details.appendChild(summary);
+        var body = document.createElement('div');
+        body.className = 'sec-body';
+        sec.body.forEach(function (n) { body.appendChild(n); });
+        details.appendChild(body);
+        el.insertBefore(details, sec.head);
+        el.removeChild(sec.head);
         var a = document.createElement('a');
-        a.className = 'toc-link'; a.href = '#' + id; a.textContent = h.textContent;
+        a.className = 'toc-link'; a.href = '#sec-' + i; a.textContent = summary.textContent;
+        a.addEventListener('click', function (e) {
+          e.preventDefault(); details.open = true;
+          details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
         toc.appendChild(a);
       });
     } catch (e) {
