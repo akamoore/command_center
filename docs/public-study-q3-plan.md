@@ -191,6 +191,130 @@ Pankaj/Mackenzie.
 
 ---
 
+## 7. New study concepts (idea bank — net-new, not repeats)
+
+Beyond the six-study rotation (§4), these are **all-new** concepts (no relaunches) for the
+cohorts we're short on. Each rides a proven theme→cohort pattern (§3) and the playbook's
+winning mold: 7-day, one concrete daily action, sensory feedback, low friction.
+
+**Shared spec defaults** (apply to every card below): Status `Proposed` · **Owner** Katie ·
+**Review** Mackenzie (protocol) · **QA** Nisha (one pass) · **Entry** target gap open, slot
+free under the cap, protocol reviewed, first-run checked · **Exit** target hit, or no new
+joins in 2 months, or the gap closes. Per-study specifics follow.
+
+### Mainstream wearables — Apple Watch · Fitbit · Garmin
+
+**▸ The Zone-2 Week** ⭐ *(also hits Whoop/recovery)*
+- *Daily action:* keep heart rate in "zone 2" for 20 minutes.
+- *Primary goal (one factor):* recruit net-new Apple Watch / Fitbit / Garmin users.
+- *Target metric:* PENDING — net-new mainstream-wearable participants.
+- *Budget:* organic + wearable-targeted paid top-up (Matt).
+- *Why it wins:* every mainstream tracker shows HR zones, so it speaks directly to device owners — and the HR/recovery framing crosses into the Whoop crowd.
+
+**▸ The After-Dinner Walk**
+- *Daily action:* a 10-minute walk after your largest meal.
+- *Primary goal (one factor):* recruit net-new step-tracker users (Apple Watch / Fitbit / Garmin).
+- *Target metric:* PENDING — net-new mainstream-wearable participants.
+- *Budget:* organic.
+- *Why it wins:* movement + a visible glucose/digestion payoff; gentle, so it should retain well.
+
+**▸ The Movement Snack**
+- *Daily action:* three 2-minute movement bursts a day.
+- *Primary goal (one factor):* recruit net-new step-tracker users.
+- *Target metric:* PENDING — net-new mainstream-wearable participants.
+- *Budget:* organic.
+- *Why it wins:* the lowest-friction movement format; novel, beginner-friendly framing.
+
+### Male — energy · strength · recovery
+
+**▸ The Creatine Effect** ⭐ *(sponsor-friendly)*
+- *Daily action:* daily creatine + tracking.
+- *Primary goal (one factor):* recruit net-new male participants.
+- *Target metric:* PENDING — net-new male.
+- *Budget:* **paid**, male-targeted — and a supplement brand could sponsor it.
+- *Why it wins:* the strength-supplement crowd skews male; doubles as a sponsored-study lead.
+
+**▸ The Cold Plunge Challenge**
+- *Daily action:* a daily cold plunge / cold immersion.
+- *Primary goal (one factor):* recruit net-new male participants.
+- *Target metric:* PENDING — net-new male.
+- *Budget:* paid, male-targeted.
+- *Why it wins:* an intense, performance-framed cousin of Cold Shower; plunge culture skews male/biohacker + recovery. *(Expect Wim-Hof-like retention — pulls the cohort, leaks a bit more.)*
+
+**▸ The Protein Challenge** *(sponsor-friendly)*
+- *Daily action:* hit a daily protein target.
+- *Primary goal (one factor):* recruit net-new male participants.
+- *Target metric:* PENDING — net-new male.
+- *Budget:* paid, male-targeted; a protein brand could sponsor.
+- *Why it wins:* strength/nutrition framing pulls men; concrete and measurable.
+
+### Age 60+ — gentle · restorative · longevity
+
+**▸ The Balance Challenge** ⭐
+- *Daily action:* a daily balance practice (e.g., 60 seconds on one leg).
+- *Primary goal (one factor):* recruit net-new participants aged 60+.
+- *Target metric:* PENDING — net-new 60+.
+- *Budget:* organic + 55+-targeted top-up.
+- *Why it wins:* balance / fall-prevention is squarely a 60+ concern, novel, and measurable — something older adults actually want to work on.
+
+**▸ The Joint Mobility Week**
+- *Daily action:* one gentle mobility / stretch flow a day.
+- *Primary goal (one factor):* recruit net-new 60+.
+- *Target metric:* PENDING — net-new 60+.
+- *Budget:* organic.
+- *Why it wins:* no skill barrier, restorative; matches the gentle formats 60+ already over-index on.
+
+**▸ The Fiber Effect** *(sponsor-friendly)*
+- *Daily action:* hit a daily fiber target.
+- *Primary goal (one factor):* recruit net-new 60+.
+- *Target metric:* PENDING — net-new 60+.
+- *Budget:* organic; a gut-health / nutrition brand could sponsor.
+- *Why it wins:* gut-health resonates with older adults; nutrition theme (Seasonal Superfoods pulled 60+ at 90% completion).
+
+### Hispanic & Black — short · low-friction · high-retention
+
+**▸ The Physiological Sigh** ⭐
+- *Daily action:* two daily rounds of the double-inhale / long-exhale breath.
+- *Primary goal (one factor):* recruit net-new participants from under-represented ethnicities (Hispanic + Black).
+- *Target metric:* PENDING — net-new Hispanic + Black.
+- *Budget:* organic + culturally-relevant distribution / partners.
+- *Why it wins:* distinct from Box Breathing / 4-7-8 and riding real buzz; breathwork over-indexes both groups and retains well.
+
+**▸ The Screen Curfew**
+- *Daily action:* no screens for 30 minutes before bed.
+- *Primary goal (one factor):* recruit net-new Hispanic + Black participants.
+- *Target metric:* PENDING — net-new Hispanic + Black.
+- *Budget:* organic + culturally-relevant distribution.
+- *Why it wins:* sleep-hygiene, zero-cost, low-friction — the accessible profile that over-indexes here.
+
+**▸ The 5-Minute Reset**
+- *Daily action:* one 5-minute midday calm break.
+- *Primary goal (one factor):* recruit net-new Hispanic + Black participants.
+- *Target metric:* PENDING — net-new Hispanic + Black.
+- *Budget:* organic + culturally-relevant distribution.
+- *Why it wins:* even lower-friction than the 30-Minute Reset; the shorter the ask, the better these cohorts convert.
+
+### Whoop bridge — recovery
+
+**▸ The HRV Week** ⭐
+- *Daily action:* a daily recovery practice, tracked by HRV.
+- *Primary goal (one factor):* recruit net-new Whoop users.
+- *Target metric:* PENDING — net-new Whoop.
+- *Budget:* organic + Whoop-targeted top-up.
+- *Why it wins:* Whoop users concentrate in clinical recovery studies — an HRV/recovery-framed public study is the bridge that pulls them into public challenges.
+
+---
+
+**Sponsor crossover:** Creatine, Protein, and Fiber (and any Magnesium-type) studies could
+each attract a supplement sponsor — net-new public challenges that double as sponsored-study
+leads. Worth flagging to Pankaj.
+
+**Distribution note (ethnicity):** the *format* earns the over-index; *reaching* those
+participants is a distribution job (culturally-relevant channels and partners), not the study
+content itself.
+
+---
+
 ## Caveats
 
 - **Participations, not distinct people.** A person counts once per study; shares
