@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Q3 Public Study Plan · Reputable Health</title>
 <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
   :root{
     --bg-body:#0a0a0a; --bg-surface:#1a1a1a; --bg-raised:#141414;
@@ -18,7 +19,13 @@
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
     -webkit-font-smoothing:antialiased; line-height:1.6;
   }
-  .wrap{max-width:920px; margin:0 auto; padding:clamp(1rem,5vw,2rem);}
+  /* signature background: grid + lime orb */
+  body::before{content:'';position:fixed;inset:0;z-index:-2;
+    background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);
+    background-size:52px 52px;}
+  body::after{content:'';position:fixed;top:-12%;right:-12%;width:620px;height:620px;z-index:-1;
+    background:radial-gradient(circle,rgba(200,230,74,0.10),transparent 60%);filter:blur(90px);pointer-events:none;}
+  .wrap{max-width:1040px; margin:0 auto; padding:clamp(1rem,5vw,2rem);}
   .topbar{
     display:flex; align-items:center; justify-content:space-between; gap:1rem;
     padding:16px 0; border-bottom:1px solid var(--border); margin-bottom:30px; flex-wrap:wrap;
@@ -31,8 +38,32 @@
     transition:background .2s ease;
   }
   .back:hover{background:rgba(200,230,74,0.08);}
-  #doc h1{font-size:clamp(1.7rem,4vw,2.3rem); color:var(--text); line-height:1.2; margin:0 0 10px; font-weight:700;}
-  #doc h2{font-size:1.4rem; color:var(--text); margin:38px 0 14px; padding-top:20px; border-top:1px solid var(--border); font-weight:600;}
+  /* hero */
+  .badge{display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--lime); background:rgba(200,230,74,0.1); border:1px solid rgba(200,230,74,0.3); padding:5px 13px; border-radius:100px;}
+  .hero h1{font-size:clamp(2rem,5vw,3rem); color:var(--text); line-height:1.1; margin:14px 0 10px; font-weight:700;}
+  .hero .tag{font-size:15px; color:var(--text-secondary); max-width:700px;}
+  /* stat cards */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin:26px 0 6px;}
+  .stat-card{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:16px; padding:20px;}
+  .stat-num{font-size:2rem; font-weight:700; color:var(--lime); line-height:1;}
+  .stat-label{font-size:11px; color:var(--text-muted); margin-top:7px; text-transform:uppercase; letter-spacing:0.07em;}
+  /* charts */
+  .section-label{font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-muted); margin:40px 0 4px;}
+  .charts-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin:14px 0 8px;}
+  .chart-card{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:16px; padding:18px;}
+  .chart-card h3{margin:0 0 2px; font-size:14px; color:var(--text); font-weight:600;}
+  .chart-card .sub{font-size:11px; color:var(--text-muted); margin-bottom:14px;}
+  .chart-wrap{position:relative; height:270px;}
+  .chart-card.wide{grid-column:1 / -1;}
+  /* section nav */
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:36px 0 4px; padding:16px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  .toc-link{font-size:12px; color:var(--text-secondary); text-decoration:none; border:1px solid var(--border); padding:6px 13px; border-radius:100px; transition:all .2s ease; white-space:nowrap;}
+  .toc-link:hover{border-color:var(--lime); color:var(--lime); background:rgba(200,230,74,0.06);}
+  /* rendered markdown */
+  #doc{margin-top:26px;}
+  #doc h1{display:none;}
+  #doc h2{font-size:1.4rem; color:var(--text); margin:42px 0 14px; padding-top:22px; border-top:1px solid var(--border); font-weight:600; scroll-margin-top:20px;}
   #doc h3{font-size:1.08rem; color:var(--lime-light); margin:26px 0 8px; font-weight:600;}
   #doc p,#doc li{color:var(--text-secondary); font-size:15px;}
   #doc li{margin-bottom:5px;}
@@ -41,10 +72,7 @@
   #doc strong{color:var(--text); font-weight:600;}
   #doc em{color:var(--text-muted); font-style:italic;}
   #doc code{background:var(--bg-surface); color:var(--lime-light); padding:2px 7px; border-radius:6px; font-size:13px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
-  #doc blockquote{
-    border-left:3px solid rgba(200,230,74,0.45); margin:18px 0; padding:6px 18px;
-    color:var(--text-muted); background:rgba(200,230,74,0.04); border-radius:0 10px 10px 0;
-  }
+  #doc blockquote{border-left:3px solid rgba(200,230,74,0.45); margin:18px 0; padding:6px 18px; color:var(--text-muted); background:rgba(200,230,74,0.04); border-radius:0 10px 10px 0;}
   #doc table{width:100%; border-collapse:collapse; margin:18px 0; font-size:13px; display:block; overflow-x:auto;}
   #doc th{text-align:left; color:var(--lime); font-size:10.5px; text-transform:uppercase; letter-spacing:0.07em; font-weight:700; padding:10px 12px; border-bottom:1px solid var(--border); white-space:nowrap;}
   #doc td{padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text-secondary); vertical-align:top;}
@@ -59,9 +87,98 @@
     <div class="brand"><span class="dot"></span> Reputable Health · Recruitment Command Center</div>
     <a class="back" href="./index.html">&larr; Back to dashboard</a>
   </div>
-  <div id="doc"><p class="status">Loading the Q3 plan&hellip;</p></div>
+
+  <div class="hero">
+    <span class="badge">Public Study Plan · Q3</span>
+    <h1>Closing the cohort gaps</h1>
+    <p class="tag">A data-backed plan to recruit the participants we're short on — by wearable, gender, age, and ethnicity — across July, August, and September. Snapshot from the Jun 29, 2026 API pull.</p>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num">~445</div><div class="stat-label">Net-new target (Q3)</div></div>
+      <div class="stat-card"><div class="stat-num">$2,250</div><div class="stat-label">Ad budget (Q3)</div></div>
+      <div class="stat-card"><div class="stat-num">6</div><div class="stat-label">Studies in rotation</div></div>
+      <div class="stat-card"><div class="stat-num">8</div><div class="stat-label">Priority cohorts</div></div>
+    </div>
+  </div>
+
+  <div class="section-label">At a glance</div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Q3 net-new targets by cohort</h3>
+      <div class="sub">Participants to add this quarter</div>
+      <div class="chart-wrap"><canvas id="chart-targets"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Ad budget allocation</h3>
+      <div class="sub">$2,250 total · paid where organic can't reach</div>
+      <div class="chart-wrap"><canvas id="chart-budget"></canvas></div>
+    </div>
+    <div class="chart-card wide">
+      <h3>Targets by month</h3>
+      <div class="sub">Each cohort spikes the month its gap-filling study runs (~149 · 147 · 149)</div>
+      <div class="chart-wrap"><canvas id="chart-months"></canvas></div>
+    </div>
+  </div>
+
+  <nav class="toc" id="toc"></nav>
+
+  <div id="doc"><p class="status">Loading the full plan&hellip;</p></div>
 </div>
+
 <script>
+  // ── Charts (curated summary of the plan's key numbers; full detail renders below) ──
+  // Cohort palette — kept consistent across charts.
+  var COHORTS = ['Male','Hispanic','Apple Watch','Age 60+','Black','Fitbit','Garmin','Whoop'];
+  var COLOR = {
+    'Male':'#FB7185','Hispanic':'#74B9FF','Apple Watch':'#C8E64A','Age 60+':'#A78BFA',
+    'Black':'#60A5FA','Fitbit':'#34D399','Garmin':'#FBBF24','Whoop':'#6C5CE7'
+  };
+  var Q3_TARGET = { 'Male':175,'Hispanic':60,'Apple Watch':50,'Age 60+':50,'Black':45,'Fitbit':25,'Garmin':20,'Whoop':20 };
+  var BY_MONTH = { // [Jul, Aug, Sep]
+    'Apple Watch':[25,15,10],'Fitbit':[12,8,5],'Garmin':[9,5,6],'Male':[60,50,65],
+    'Black':[10,18,17],'Hispanic':[15,22,23],'Age 60+':[12,23,15],'Whoop':[6,6,8]
+  };
+  var BUDGET = { labels:['Male','Mainstream wearables','Black + Hispanic','Age 60+'], data:[1000,650,400,200],
+    colors:['#FB7185','#C8E64A','#74B9FF','#A78BFA'] };
+
+  try {
+    if (typeof Chart !== 'undefined') {
+      Chart.defaults.color = '#9aa0a6';
+      Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+      Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      var gridc = 'rgba(255,255,255,0.06)';
+
+      // 1) Targets by cohort — horizontal bar, per-cohort color
+      new Chart(document.getElementById('chart-targets'), {
+        type:'bar',
+        data:{ labels:COHORTS, datasets:[{ data:COHORTS.map(function(c){return Q3_TARGET[c];}),
+          backgroundColor:COHORTS.map(function(c){return COLOR[c];}), borderRadius:5, barThickness:16 }] },
+        options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{display:false}, tooltip:{callbacks:{label:function(ctx){return '+'+ctx.parsed.x+' net-new';}}} },
+          scales:{ x:{beginAtZero:true, grid:{color:gridc}, ticks:{precision:0}}, y:{grid:{display:false}, ticks:{font:{size:12}}} } }
+      });
+
+      // 2) Budget donut
+      new Chart(document.getElementById('chart-budget'), {
+        type:'doughnut',
+        data:{ labels:BUDGET.labels, datasets:[{ data:BUDGET.data, backgroundColor:BUDGET.colors, borderColor:'#0a0a0a', borderWidth:3 }] },
+        options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+          plugins:{ legend:{position:'bottom', labels:{boxWidth:10, boxHeight:10, padding:10, font:{size:11}}},
+            tooltip:{callbacks:{label:function(ctx){return ctx.label+': $'+ctx.parsed.toLocaleString();}}} } }
+      });
+
+      // 3) Targets by month — stacked bar, one series per cohort
+      new Chart(document.getElementById('chart-months'), {
+        type:'bar',
+        data:{ labels:['July','August','September'],
+          datasets:COHORTS.map(function(c){ return { label:c, data:BY_MONTH[c], backgroundColor:COLOR[c], borderWidth:0, borderRadius:3 }; }) },
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{position:'bottom', labels:{boxWidth:10, boxHeight:10, padding:9, font:{size:11}}} },
+          scales:{ x:{stacked:true, grid:{display:false}}, y:{stacked:true, beginAtZero:true, grid:{color:gridc}, ticks:{precision:0}} } }
+      });
+    }
+  } catch (e) { /* charts are a bonus — fail silently, detail still renders below */ }
+
+  // ── Full plan (rendered from the markdown source of truth) ──
   (async function () {
     var el = document.getElementById('doc');
     try {
@@ -69,12 +186,20 @@
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       var md = await resp.text();
       if (typeof marked === 'undefined') {
-        // Markdown renderer didn't load — show the raw text so it's still readable on-page.
         el.innerHTML = '<pre style="white-space:pre-wrap;color:var(--text-secondary);font-size:13px;">' +
           md.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }) + '</pre>';
         return;
       }
       el.innerHTML = marked.parse(md);
+      // Build the section nav from the rendered headings.
+      var toc = document.getElementById('toc');
+      var heads = el.querySelectorAll('h2');
+      heads.forEach(function (h, i) {
+        var id = 'sec-' + i; h.id = id;
+        var a = document.createElement('a');
+        a.className = 'toc-link'; a.href = '#' + id; a.textContent = h.textContent;
+        toc.appendChild(a);
+      });
     } catch (e) {
       el.innerHTML = '<p class="status">Couldn&rsquo;t load the plan here (' + e.message + '). ' +
         'View it on <a style="color:var(--lime);" href="https://github.com/akamoore/command_center/blob/main/docs/public-study-q3-plan.md">GitHub</a> instead.</p>';
