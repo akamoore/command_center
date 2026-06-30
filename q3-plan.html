@@ -114,7 +114,7 @@
     </div>
     <div class="chart-card wide">
       <h3>Targets by month</h3>
-      <div class="sub">Each cohort spikes the month its gap-filling study runs (~149 · 147 · 149)</div>
+      <div class="sub">Net-new per cohort across July · August · September</div>
       <div class="chart-wrap"><canvas id="chart-months"></canvas></div>
     </div>
   </div>
@@ -166,14 +166,19 @@
             tooltip:{callbacks:{label:function(ctx){return ctx.label+': $'+ctx.parsed.toLocaleString();}}} } }
       });
 
-      // 3) Targets by month — stacked bar, one series per cohort
+      // 3) Targets by month — grouped bar: each cohort's three months side by side
+      var MONTH_COLORS = ['#C8E64A', '#74B9FF', '#A78BFA']; // Jul / Aug / Sep
       new Chart(document.getElementById('chart-months'), {
         type:'bar',
-        data:{ labels:['July','August','September'],
-          datasets:COHORTS.map(function(c){ return { label:c, data:BY_MONTH[c], backgroundColor:COLOR[c], borderWidth:0, borderRadius:3 }; }) },
+        data:{ labels:COHORTS,
+          datasets:['July','August','September'].map(function(m, mi){
+            return { label:m, data:COHORTS.map(function(c){ return BY_MONTH[c][mi]; }),
+              backgroundColor:MONTH_COLORS[mi], borderWidth:0, borderRadius:4 };
+          }) },
         options:{ responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{position:'bottom', labels:{boxWidth:10, boxHeight:10, padding:9, font:{size:11}}} },
-          scales:{ x:{stacked:true, grid:{display:false}}, y:{stacked:true, beginAtZero:true, grid:{color:gridc}, ticks:{precision:0}} } }
+          plugins:{ legend:{position:'top', labels:{boxWidth:12, boxHeight:12, padding:14, font:{size:12}}},
+            tooltip:{callbacks:{label:function(ctx){ return ctx.dataset.label + ': +' + ctx.parsed.y; }}} },
+          scales:{ x:{grid:{display:false}, ticks:{font:{size:11}}}, y:{beginAtZero:true, grid:{color:gridc}, ticks:{precision:0}} } }
       });
     }
   } catch (e) { /* charts are a bonus — fail silently, detail still renders below */ }
