@@ -3803,7 +3803,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     const totalInStudy = liveStudies.reduce((a, s) => a + (s.inStudy || 0), 0);
     const totalCompN = liveStudies.reduce((a, s) => a + (s.complianceN || 0), 0);
     const totalCompD = liveStudies.reduce((a, s) => a + (s.complianceD || 0), 0);
-    const recruitPct = totalTarget > 0 ? (totalRecruited / totalTarget * 100).toFixed(0) : 0;
+    const recruitPct = totalTarget > 0 ? (totalParticipants / totalTarget * 100).toFixed(0) : 0;
     const completedPct = totalRecruited > 0 ? (totalCompleted / totalRecruited * 100).toFixed(0) : 0;
     const compliancePct = totalCompD > 0 ? (totalCompN / totalCompD * 100).toFixed(0) : 0;
 
@@ -3818,8 +3818,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
           <div class="ps-label">Participants <span style="color:var(--text-dim);font-weight:400;">· total</span></div>
         </div>
         <div class="ps-summary-card">
-          <div class="ps-val">${fmtInt(totalRecruited)}<span style="font-size:14px;color:var(--text-dim)">/${fmtInt(totalTarget)}</span></div>
-          <div class="ps-label">Recruited (${recruitPct}%)</div>
+          <div class="ps-val">${recruitPct}%</div>
+          <div class="ps-label">Recruited <span style="color:var(--text-dim);font-weight:400;">· of ${fmtInt(totalTarget)} target</span></div>
         </div>
         <div class="ps-summary-card">
           <div class="ps-val">${fmtInt(totalCompleted)}</div>
@@ -3849,8 +3849,13 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
               const inStudy = s.inStudy;
               const compD = s.complianceD;
               const compN = s.complianceN;
+              const participants = psParticipantsFor(s);
 
-              const recPct = (target > 0 && joined != null) ? (joined / target * 100) : null;
+              // Recruited = lifetime participants toward target (the true progress).
+              // `joined` is 30-day windowed joins (from /api/recruiting?days=30) → shown
+              // separately as the interest / run-rate signal, NOT divided into a lifetime target.
+              const recNum = participants != null ? participants : (joined ?? null);
+              const recPct = (target > 0 && recNum != null) ? (recNum / target * 100) : null;
               const compPct = (joined > 0 && onboarded != null) ? (onboarded / joined * 100) : null;
               const inPct = (joined > 0 && inStudy != null) ? (inStudy / joined * 100) : null;
               const complPct = (compD > 0) ? (compN / compD * 100) : null;
@@ -3859,12 +3864,13 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
                 : recPct >= 80 ? 'var(--lime)'
                 : recPct >= 50 ? 'var(--yellow)' : 'var(--rose)';
 
-              const recCell = (target > 0 && joined != null)
+              const recCell = (target > 0 && recNum != null)
                 ? `<div style="display:flex;align-items:center;gap:8px;">
                     <span style="color:${recColor};font-weight:600;">${recPct.toFixed(0)}%</span>
-                    <span>${joined}/${target}</span>
+                    <span>${fmtInt(recNum)}/${fmtInt(target)}</span>
                   </div>
-                  <div class="ps-bar" style="width:80px;margin-top:3px;"><div class="ps-bar-fill" style="width:${Math.min(recPct, 100)}%;background:${recColor};"></div></div>`
+                  <div class="ps-bar" style="width:80px;margin-top:3px;"><div class="ps-bar-fill" style="width:${Math.min(recPct, 100)}%;background:${recColor};"></div></div>
+                  <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">+${fmtInt(joined ?? 0)} joined · 30d</div>`
                 : '<span style="color:var(--text-dim);">—</span>';
 
               const inCell = (inStudy != null && joined > 0)
@@ -3887,7 +3893,6 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
                   ? `<span title="${esc(h.note)}" style="color:${PS_TIER[h.tier].color};font-weight:600;white-space:nowrap;">● ${PS_TIER[h.tier].label}</span>`
                   : '<span style="color:var(--text-dim);">—</span>');
 
-              const participants = psParticipantsFor(s);
               const partCell = participants != null
                 ? `<span style="font-weight:600;">${fmtInt(participants)}</span>`
                 : '<span style="color:var(--text-dim);">—</span>';
@@ -3908,9 +3913,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       <div style="font-size:11px;color:var(--text-dim);margin-top:12px;line-height:1.7;">
         <strong style="color:var(--text-secondary);">What each number means:</strong>
         <strong style="color:var(--text);">Participants</strong> = total who joined the study (from <code style="color:var(--text-secondary);">/api/public-studies</code> — the same number the per-study detail view shows) ·
-        <strong style="color:var(--text);">Recruited</strong> = joined toward target (recruiting funnel, <code style="color:var(--text-secondary);">/api/recruiting</code>) ·
-        <strong style="color:var(--text);">In Study</strong> = currently active ·
-        <strong style="color:var(--text);">Completed</strong> / <strong style="color:var(--text);">Compliance</strong> = definitions under review (see catalog rules).
+        <strong style="color:var(--text);">Recruited</strong> = lifetime <strong>participants ÷ target</strong> (true progress) ·
+        <strong style="color:var(--text);">+N joined · 30d</strong> = recent join rate — the interest / keep-or-kill signal ·
+        <strong style="color:var(--text);">In Study</strong> / <strong style="color:var(--text);">Completed</strong> = recent 30-day cohort (<code style="color:var(--text-secondary);">days=30</code> window) ·
+        <strong style="color:var(--text);">Compliance</strong> = under review (see catalog rules).
         Counts are live from the API and <em>pending data-integrity verification with Manpreet.</em>
       </div>
     `;
