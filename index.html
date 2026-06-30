@@ -965,7 +965,7 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
         <span id="ps-source-badge" class="status-badge cached" style="display:none;"><span class="dot"></span><span id="ps-source-badge-text">Cached</span></span>
       </div>
       <div id="ps-source-line" style="font-size:12px;color:var(--text-dim);">Loading live public-studies feed…</div>
-      <div style="font-size:11px;color:var(--text-dim);margin-top:6px;"><strong style="color:var(--lime);">Health (v1)</strong> is based on completion rate (≥55% healthy · 35–55% watch · &lt;35% low). Launch date, days on catalog, and 30-day run-rate now come straight from the operations API per study.</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:6px;"><strong style="color:var(--lime);">Health (v1)</strong> applies catalog status first — off-catalog &amp; restructured studies are marked <span style="color:var(--text-dim);">○ Off catalog</span> (not scored, no run rate) — then scores live studies on completion rate (≥55% healthy · 35–55% watch · &lt;35% low). Launch date &amp; 30-day run-rate come straight from the operations API per study.</div>
     </div>
 
     <div class="kpi-grid" id="ps-kpi-grid"></div>
@@ -4678,7 +4678,9 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     // reconciles — recompute the headline numbers from the kept set instead.
     const sum = excludedSome ? {} : (api.summary || {});
     const completedRates = studies.filter(s => s.completionRate > 0).map(s => s.completionRate);
-    const runRate30d = studies.reduce((a, s) => a + (s.runRate30d || 0), 0);
+    // Momentum reflects LIVE recruiting only — off-catalog / retired studies must not
+    // carry their stale run rate into the 30-day total.
+    const runRate30d = studies.filter(s => !psIsOffCatalog(s)).reduce((a, s) => a + (s.runRate30d || 0), 0);
     return {
       source: 'live',
       summary: {
@@ -4804,7 +4806,23 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     });
   }
 
+  // Catalog state for a PS-analytics study. Off-catalog / retired / restructured
+  // studies are not live recruiters, so they must not be scored or flagged like live
+  // ones. Source of truth is the curated OFF_CATALOG / RETIRED_PUBLIC lists (same as
+  // the Community table); the live feed's status/statusEffective is honored too when
+  // it clearly reports a study as no longer active.
+  function psIsOffCatalog(s) {
+    if (!s) return false;
+    if (isOffCatalog(s.name) || isRetiredPublic(s.name)) return true;
+    const st = String(s.statusEffective || s.status || '').trim().toLowerCase();
+    return ['off_catalog', 'off-catalog', 'offcatalog', 'retired', 'archived', 'inactive', 'removed'].includes(st);
+  }
+
   function psHealth(s) {
+    // Catalog status drives evaluation FIRST: a study that's off the catalog (or was
+    // restructured/retired) isn't a live recruiter, so it is not scored Healthy/Watch/
+    // Low — it's surfaced as "Off catalog" and kept out of the live comparison.
+    if (psIsOffCatalog(s)) return { score: -1, label: 'Off catalog', color: 'var(--text-dim)', offCatalog: true };
     // v1: derived from completion rate (the clearest outcome in today's data).
     // Pace / time-on-catalog / joins-per-month layer in once the API supplies
     // launch dates + a monthly joins series (docs/ops-api-requests.md §6a).
@@ -4836,18 +4854,23 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const ratePct = s.completionRate > 0 ? s.completionRate.toFixed(2) + '%' : '—';
       const rateColor = s.completionRate >= 70 ? 'var(--green)' : s.completionRate >= 50 ? 'var(--lime)' : s.completionRate > 0 ? 'var(--yellow)' : 'var(--text-dim)';
       const h = psHealth(s);
-      const runRate = s.runRate30d == null ? '—' : Number(s.runRate30d).toLocaleString();
+      const off = h.offCatalog === true;
+      // Off-catalog studies aren't recruiting, so their 30-day run rate is stale — blank it.
+      const runRate = off ? '—' : (s.runRate30d == null ? '—' : Number(s.runRate30d).toLocaleString());
+      const healthTitle = off
+        ? 'Off the participant catalog (retired or restructured) — not a live recruiter, so it is not scored Healthy / Watch / Low and its run rate is hidden.'
+        : 'Health (v1): catalog status is applied first, then live studies score on completion rate — ≥55% healthy · 35–55% watch · &lt;35% low.';
       const launch = s.launchDate ? psFmtDate(s.launchDate) : '—';
-      return `<tr>
+      return `<tr${off ? ' style="opacity:0.5;"' : ''}>
         <td>${esc(s.name)}</td>
         <td><span class="ps-cat ${catClass}">${esc(s.category)}</span></td>
-        <td><span title="Health (v1) = completion rate: ≥55% healthy · 35–55% watch · &lt;35% low. Launch date &amp; 30-day run-rate now come live from the operations API." style="color:${h.color};font-weight:600;white-space:nowrap;">● ${h.label}</span></td>
+        <td><span title="${healthTitle}" style="color:${h.color};font-weight:600;white-space:nowrap;">${off ? '○' : '●'} ${h.label}</span></td>
         <td class="num">${s.participants.toLocaleString()}</td>
         <td class="num">${s.new.toLocaleString()}</td>
         <td class="num">${s.returning.toLocaleString()}</td>
         <td class="num">${s.completed.toLocaleString()}</td>
         <td class="num" style="color:${rateColor};font-weight:600;">${ratePct}</td>
-        <td class="num">${runRate}</td>
+        <td class="num"${off ? ' title="Run rate hidden — study is off the catalog, so recent-join data is stale."' : ''}>${runRate}</td>
         <td class="num">${s.avgDaysTagged.toFixed(1)}</td>
         <td class="num">${s.avgDaysMissed.toFixed(1)}</td>
         <td style="white-space:nowrap;">${launch}</td>
