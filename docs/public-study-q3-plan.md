@@ -21,18 +21,18 @@ Mackenzie before committing.
 
 Ecosystem baselines, as **share of *known*** (excludes "Unknown"/"Prefer not to say").
 
-| Dimension | TODAY | GAP / PRIORITY |
-|---|---|---|
-| WHOOP | 8.8% | Clone Gratitude / 30-Min Reset / Dry Week (recovery-discipline themes pull Whoop) |
-| Apple Watch | 2.2% | **High** — steps/movement challenges (over-index 5–7×) |
-| Fitbit | 1.1% | **High** — steps + yoga |
-| Garmin *(4th wearable)* | 0.8% | Endurance/discipline streaks (yoga, Wim Hof, Gratitude) |
-| Oura | 87.1% | Sufficient — low priority |
-| Gender (male) | 29.4% | ⚡ Energy-drink + sports only; wellness won't move it |
-| Age (60+) | ~11.6%* | Gentle nature / nutrition / reading |
-| Ethnicity (Hispanic) | 10.3% | Gratitude, Dry Week, Cold Shower, Power Nap |
-| Ethnicity (Black) | 4.5% | 30-Min Reset, 14 Day Yoga, Box Breathing, Power Nap (small base, 74% coverage — directional) |
-| *(Income — out)* | — | >$100k is ~57% of known income (affluent-skewed); not a priority dimension |
+| Dimension | TODAY (share) | Q3 TARGET (net-new) | GAP / PRIORITY |
+|---|---|---|---|
+| WHOOP | 8.8% | +20 *(bridge)* | Clone Gratitude / 30-Min Reset / Dry Week (recovery-discipline themes pull Whoop) |
+| Apple Watch | 2.2% | **+50** | **High** — steps/movement challenges (over-index 5–7×) |
+| Fitbit | 1.1% | **+25** | **High** — steps + yoga |
+| Garmin *(4th wearable)* | 0.8% | **+20** | Endurance/discipline streaks (yoga, Wim Hof, Gratitude) |
+| Oura | 87.1% | maintain | Sufficient — low priority |
+| Gender (male) | 29.4% | **+175** | ⚡ Energy-drink + sports only; wellness won't move it |
+| Age (60+) | ~11.6%* | **+50** | Gentle nature / nutrition / reading |
+| Ethnicity (Hispanic) | 10.3% | **+60** | Gratitude, Dry Week, Cold Shower, Power Nap |
+| Ethnicity (Black) | 4.5% | **+45** | 30-Min Reset, 14 Day Yoga, Box Breathing, Power Nap (small base, 74% coverage — directional) |
+| *(Income — out)* | — | — | >$100k is ~57% of known income (affluent-skewed); not a priority dimension |
 
 *\*56+ proxy; the API buckets at 56–65 / 66+. Income left out of the gap table per plan decision.*
 
@@ -159,19 +159,20 @@ Each is one-factor and maps to a specific gap (passes New-idea-filter checks 01,
 ## 5. Q3 rotation calendar
 
 6 studies · ~2 per month (at cap) · every gap covered, male & ethnicity twice ·
-paid concentrated only on male (the gap organic can't reach).
+paid weighted to male, with wearable / ethnicity / 60+ top-ups (per §8).
 
-| Month | Study | Fills | Spend |
+| Month | Study | Fills | Spend (paid) |
 |---|---|---|---|
-| **July** | The Daily Steps Streak | Apple Watch + Fitbit + Garmin | Organic |
-| | The Celsius Effect *(scale)* | **Male** | **Paid** ~$375 |
-| **August** | The Box Breathing Effect *(relaunch)* | Hispanic + Black | Organic |
-| | The Nature Dose *(relaunch)* | 60+ + Apple Watch | Organic |
-| **September** | The Gratitude Effect *(relaunch)* | Hispanic/Black + Whoop/Garmin | Organic |
-| | Game-Day Energy | **Male** | **Paid** ~$375 |
+| **July** | The Daily Steps Streak | Apple Watch + Fitbit + Garmin | Organic + **~$550** (wearable targeting) |
+| | The Celsius Effect *(scale)* | **Male** | **~$500** (male) |
+| **August** | The Box Breathing Effect *(relaunch)* | Hispanic + Black | Organic + **~$200** (distribution) |
+| | The Nature Dose *(relaunch)* | 60+ + Apple Watch | Organic + **~$300** (60+ & Apple) |
+| **September** | The Gratitude Effect *(relaunch)* | Hispanic/Black + Whoop/Garmin | Organic + **~$200** (distribution) |
+| | Game-Day Energy | **Male** | **~$500** (male) |
 
-Budget: ~$750/quarter, all paid on the two male studies; everything else organic
-("organic carries the targets, paid is a top-up").
+Budget: **~$2,250/quarter** ($750/month) split per §8 — male ~$1,000 · wearables ~$650 ·
+ethnicity ~$400 · 60+ ~$200 · Whoop $0. Organic carries the rest ("organic carries the
+targets, paid is a top-up"). Per-study spend is **proposed** — confirm with Pankaj.
 
 ---
 
