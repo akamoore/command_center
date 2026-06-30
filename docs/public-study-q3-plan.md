@@ -365,6 +365,30 @@ after month 1** against actual cost-per-result and run rates.
 | **Age 60+** | 618 | **+50** | ~17 | ~33 |
 | **Whoop** *(bridge)* | 449 | **+20** | 0 | ~20 |
 
+### Month-by-month target breakdown
+
+Each cohort's quarterly target, spread across the quarter by **when its gap-filling study runs**
+(§5 rotation): a cohort spikes the month its study launches; other months are organic trickle.
+
+| Cohort | Today | **July** | **August** | **September** | **Q3 TOTAL** |
+|---|---|---|---|---|---|
+| **Apple Watch** | 113 | +25 | +15 | +10 | **+50** |
+| **Fitbit** | 56 | +12 | +8 | +5 | **+25** |
+| **Garmin** | 42 | +9 | +5 | +6 | **+20** |
+| **Male** | 1,568 | +60 | +50 | +65 | **+175** |
+| **Black** | 196 | +10 | +18 | +17 | **+45** |
+| **Hispanic** | 446 | +15 | +22 | +23 | **+60** |
+| **Age 60+** | 618 | +12 | +23 | +15 | **+50** |
+| **Whoop** *(bridge)* | 449 | +6 | +6 | +8 | **+20** |
+| **Monthly total** | | **~149** | **~147** | **~149** | **~445** |
+
+**What drives each month:**
+- **July** — Daily Steps Streak (wearables spike) + Celsius (male spike).
+- **August** — Box Breathing (Hispanic + Black spike) + Nature Dose (60+ & Apple Watch spike).
+- **September** — Gratitude (Hispanic/Black + Whoop/Garmin) + Game-Day Energy (male spike).
+
+*(Monthly totals don't equal distinct people — cohorts overlap.)*
+
 ~$2,250 buys roughly **175–250 paid-acquired participants** (at $9–13 effective CAC); organic
 carries the rest. Targets overlap (one person can be male *and* Apple Watch *and* Hispanic), so
 they don't sum to total headcount.
