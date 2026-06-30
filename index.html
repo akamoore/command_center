@@ -1198,6 +1198,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // ============================================================
   let apiData = null;
   let apiError = null;
+  let publicStudiesApi = null;  // /api/public-studies — canonical per-study participant totals
   let sendgridData = null;
   let appsflyerData = null;
   let metaAdsData = null;
@@ -3745,6 +3746,21 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return OFF_CATALOG.some(k => n.includes(k));
   };
 
+  // Canonical "total participants" for a study, from the /api/public-studies feed
+  // (the same field the per-study detail views show). Matched by id, then by name.
+  // This reconciles the Community table (which otherwise only had the recruiting
+  // funnel `joined`) with the detail view, so the same study reports one number.
+  function psParticipantsFor(study) {
+    if (!publicStudiesApi || !Array.isArray(publicStudiesApi.studies) || !study) return null;
+    const list = publicStudiesApi.studies;
+    let hit = study.id != null ? list.find(p => p && String(p.id) === String(study.id)) : null;
+    if (!hit) {
+      const nm = String(study.name || '').trim().toLowerCase();
+      if (nm) hit = list.find(p => p && String(p.name || '').trim().toLowerCase() === nm);
+    }
+    return (hit && hit.participants != null) ? Number(hit.participants) : null;
+  }
+
   function renderPublicStudies() {
     const container = $('#public-studies-content');
     // Use the live, API-enriched studies (same source as the rest of the dashboard)
@@ -3780,6 +3796,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     // in the table, marked, but don't count toward the live-catalog totals).
     const liveStudies = publicStudies.filter(s => !isOffCatalog(s.name));
     const offCatalogCount = publicStudies.length - liveStudies.length;
+    const totalParticipants = liveStudies.reduce((a, s) => a + (psParticipantsFor(s) || 0), 0);
     const totalRecruited = liveStudies.reduce((a, s) => a + (s.joined || 0), 0);
     const totalTarget = liveStudies.reduce((a, s) => a + (s.target || 0), 0);
     const totalCompleted = liveStudies.reduce((a, s) => a + (s.onboarded || 0), 0);
@@ -3795,6 +3812,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         <div class="ps-summary-card">
           <div class="ps-val">${liveStudies.length}</div>
           <div class="ps-label">Live Studies${offCatalogCount ? ` <span style="color:var(--text-dim);font-weight:400;">· ${offCatalogCount} off catalog</span>` : ''}</div>
+        </div>
+        <div class="ps-summary-card">
+          <div class="ps-val">${fmtInt(totalParticipants)}</div>
+          <div class="ps-label">Participants <span style="color:var(--text-dim);font-weight:400;">· total</span></div>
         </div>
         <div class="ps-summary-card">
           <div class="ps-val">${fmtInt(totalRecruited)}<span style="font-size:14px;color:var(--text-dim)">/${fmtInt(totalTarget)}</span></div>
@@ -3866,8 +3887,13 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
                   ? `<span title="${esc(h.note)}" style="color:${PS_TIER[h.tier].color};font-weight:600;white-space:nowrap;">● ${PS_TIER[h.tier].label}</span>`
                   : '<span style="color:var(--text-dim);">—</span>');
 
+              const participants = psParticipantsFor(s);
+              const partCell = participants != null
+                ? `<span style="font-weight:600;">${fmtInt(participants)}</span>`
+                : '<span style="color:var(--text-dim);">—</span>';
               return `<tr${offCatalog ? ' style="opacity:0.5;"' : ''}>
                 <td>${esc(s.name)}</td>
+                <td>${partCell}</td>
                 <td>${recCell}</td>
                 <td>${inCell}</td>
                 <td>${compCell}</td>
@@ -3879,11 +3905,20 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
           </tbody>
         </table>
       </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:12px;line-height:1.7;">
+        <strong style="color:var(--text-secondary);">What each number means:</strong>
+        <strong style="color:var(--text);">Participants</strong> = total who joined the study (from <code style="color:var(--text-secondary);">/api/public-studies</code> — the same number the per-study detail view shows) ·
+        <strong style="color:var(--text);">Recruited</strong> = joined toward target (recruiting funnel, <code style="color:var(--text-secondary);">/api/recruiting</code>) ·
+        <strong style="color:var(--text);">In Study</strong> = currently active ·
+        <strong style="color:var(--text);">Completed</strong> / <strong style="color:var(--text);">Compliance</strong> = definitions under review (see catalog rules).
+        Counts are live from the API and <em>pending data-integrity verification with Manpreet.</em>
+      </div>
     `;
   }
 
   const commColumns = [
     { key: 'name', label: 'Study Name' },
+    { key: 'participants', label: 'Participants' },
     { key: 'recruited', label: 'Recruited' },
     { key: 'inStudy', label: 'In Study' },
     { key: 'completed', label: 'Completed' },
@@ -3895,6 +3930,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   function getCommSortValue(s, col) {
     switch (col) {
       case 'name': return (s.name || '').toLowerCase();
+      case 'participants': return psParticipantsFor(s) ?? -1;
       case 'recruited': return s.joined ?? -1;
       case 'inStudy': return s.inStudy ?? -1;
       case 'completed': return s.onboarded ?? -1;
@@ -4417,16 +4453,18 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // ============================================================
   async function loadAndRender() {
     try {
-      const [recruitData, sgData, afData, maData] = await Promise.allSettled([
+      const [recruitData, sgData, afData, maData, psData] = await Promise.allSettled([
         dataService.fetchRecruitingData(selectedDays),
         dataService.fetchSendGridStats(),
         dataService.fetchAppsflyerStats(),
         dataService.fetchMetaAdsStats(),
+        dataService.fetchPublicStudies(),
       ]);
       apiData = recruitData.status === 'fulfilled' ? recruitData.value : null;
       sendgridData = sgData.status === 'fulfilled' ? sgData.value : null;
       appsflyerData = afData.status === 'fulfilled' ? afData.value : null;
       metaAdsData = maData.status === 'fulfilled' ? maData.value : null;
+      publicStudiesApi = psData.status === 'fulfilled' ? psData.value : null;
       apiError = recruitData.status === 'rejected' ? recruitData.reason.message : null;
     } catch (err) {
       apiError = err.message;
