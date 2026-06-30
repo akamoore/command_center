@@ -315,6 +315,67 @@ content itself.
 
 ---
 
+## 8. Cohort priority, ad budget & Q3 targets
+
+**Guiding principle:** *ad ROI is highest where organic can't reach the cohort.* Spend paid
+dollars on gaps with no free alternative; let organic carry the gaps where a proven format
+already over-indexes.
+
+**Budget basis:** ~**$750/month** (confirmed cadence) ≈ **$2,250 for Q3**, ads on select
+studies only, allocation tied to each study's target demographic. **Cost anchor (real):**
+Meta CPC **$0.29** · CPM **$8.71** · CTR **3.0%** · blended cost-per-onboard **$5.02**;
+**targeted-audience CAC planned at ~$10–15/participant** (2–3× blended, for narrow audiences
+— validate against live cost-per-result once campaigns run).
+
+### Priority — target first → last
+
+| Tier | Cohort | Today | Organic reach? | Why this priority |
+|---|---|---|---|---|
+| **1 — first** | Mainstream wearables (Apple Watch · Fitbit · Garmin) | 0.8–2.2% | ✅ strong (5–8× on steps) | Highest-leverage win — one steps study closes all three. Organic-led + precise paid. |
+| **1 — first** | Male | 29% | ❌ no (wellness flat ~30%) | Highest-ROI paid target — energy/sports is the only lever and it needs paid. |
+| **2 — second** | Black | 4.5% | ◐ modest (1.5–2×, retains) | Most severe ethnicity gap; organic breathwork/stress + distribution. |
+| **2 — second** | 60+ | ~11.6% | ◐ modest (gentle formats) | Slow-burn; organic gentle/nature formats, opportunistic paid. |
+| **3 — third** | Hispanic | 10.3% | ✅ formats over-index | Organic-led + culturally-relevant distribution. |
+| **Hold** | Whoop | 8.8% | ✗ barely (clinical-bound) | Bridge experiment (HRV Week) only — **$0 ad spend.** |
+
+### Ad budget allocation (~$2,250 / quarter)
+
+| Cohort | Ad spend | % | ROI rationale |
+|---|---|---|---|
+| **Male** | **~$1,000** | 44% | Only gap paid *uniquely* unlocks. Split Celsius + Game-Day/Creatine. |
+| **Mainstream wearables** | **~$650** | 29% | Precise device/interest targeting (Matt) — efficient; accelerates the organic steps study. |
+| **Black + Hispanic** | **~$400** | 18% | Culturally-relevant distribution top-up to amplify the organic breathwork/stress studies. |
+| **60+** | **~$200** | 9% | Top-up only if Nature Dose / Balance stalls; otherwise organic carries it. |
+| **Whoop** | **$0** | 0% | No public ROI. |
+
+### Q3 net-new targets per cohort
+
+Net-new participants to recruit into public studies this quarter. **Stretch targets — validate
+after month 1** against actual cost-per-result and run rates.
+
+| Cohort | Today | Q3 target (net-new) | ≈ via paid | ≈ via organic |
+|---|---|---|---|---|
+| **Apple Watch** | 113 | **+50** | ~30 | ~20 |
+| **Fitbit** | 56 | **+25** | ~17 | ~8 |
+| **Garmin** | 42 | **+20** | ~13 | ~7 |
+| **Male** | 1,568 | **+175** | ~65 | ~110 |
+| **Black** | 196 | **+45** | ~20 | ~25 |
+| **Hispanic** | 446 | **+60** | ~13 | ~47 |
+| **Age 60+** | 618 | **+50** | ~17 | ~33 |
+| **Whoop** *(bridge)* | 449 | **+20** | 0 | ~20 |
+
+~$2,250 buys roughly **175–250 paid-acquired participants** (at $9–13 effective CAC); organic
+carries the rest. Targets overlap (one person can be male *and* Apple Watch *and* Hispanic), so
+they don't sum to total headcount.
+
+**The one-liner:** paid chases male (+ precise wearable targeting); organic carries 60+ and
+ethnicity — consistent with "organic carries the targets, paid is a top-up."
+
+> Spend figures are **proposed** — confirm the $750/month read and the split with Pankaj before
+> committing (your plan's "two decisions to settle").
+
+---
+
 ## Caveats
 
 - **Participations, not distinct people.** A person counts once per study; shares
