@@ -977,6 +977,25 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
       </div>
     </div>
 
+    <!-- Public Study Catalog rules — inline mirror of docs/public-study-catalog-rules.md
+         (the .md is the shareable source of truth; keep this in sync when it changes). -->
+    <div class="ps-section">
+      <details class="ps-chart-card" style="padding:16px 20px;">
+        <summary style="cursor:pointer;font-weight:700;font-size:15px;color:var(--text);">
+          Public Study Catalog — keep/kill rules
+          <span style="font-size:11px;font-weight:400;color:var(--text-dim);">· policy · click to expand</span>
+        </summary>
+        <div style="margin-top:14px;font-size:13px;color:var(--text-secondary);line-height:1.65;">
+          <p style="margin:0 0 14px;color:var(--text-dim);">How we size, rotate, and prune the catalog — so keep/kill is policy, not a gut call. The signals behind it are in the join-rate view above.</p>
+          <div style="margin-bottom:12px;"><strong style="color:var(--text);">1 · How many run at once — <span style="color:var(--lime);">TBD</span>.</strong> Today ~14&ndash;15. Direction: <strong style="color:var(--text);">fewer</strong> &mdash; a smaller rotating set creates scarcity &amp; newness. The exact number is set by the join-rate data, not guessed; interim, lean fewer and retire the clearly-dead first.</div>
+          <div style="margin-bottom:12px;"><strong style="color:var(--text);">2 · Rotation &mdash; ~every 3 months.</strong> Retire a few, add a few, cycle the catalog. <em>Exception:</em> a study clearly performing (strong, sustained join rate) stays &mdash; don&rsquo;t retire a winner on a calendar.</div>
+          <div style="margin-bottom:12px;"><strong style="color:var(--text);">3 · Keep or kill = interest.</strong> The one retire lever is <strong style="color:var(--text);">recent joins</strong> (people <em>starting</em> the study), on a 7- &amp; 30-day window. If joins collapse over a 1&ndash;2 week window &rarr; <span style="color:#FB7185;font-weight:600;">retirement candidate</span>. Completion and compliance never retire a study.</div>
+          <div style="margin-bottom:2px;"><strong style="color:var(--text);">4 · Compliance is separate &amp; secondary &mdash; our problem to fix.</strong> Interest (join rate) &ne; Completion (% who finish) &ne; Compliance (% adhering during the study). Low compliance <strong>never</strong> retires a study; high interest + low compliance is a design / difficulty / nudging fix &rarr; <strong style="color:var(--lime);">redesign, not removal</strong>.</div>
+          <div style="margin-top:14px;font-size:11px;color:var(--text-dim);">Full doc: <a href="https://github.com/akamoore/command_center/blob/main/docs/public-study-catalog-rules.md" target="_blank" rel="noopener" style="color:var(--lime);">public-study-catalog-rules.md</a> · Owner: Katie · Reviewer: Pankaj</div>
+        </div>
+      </details>
+    </div>
+
     <div class="ps-section">
       <div class="ps-section-title">Completion Rate by Study</div>
       <div class="ps-chart-card">
