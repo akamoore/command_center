@@ -103,33 +103,28 @@
   </div>
 
   <div class="hero">
-    <span class="badge">Public Study Plan · Q3</span>
-    <h1>Closing the cohort gaps</h1>
-    <p class="tag">A data-backed plan to recruit the participants we're short on — by wearable, gender, age, and ethnicity — across July, August, and September. Snapshot from the Jun 29, 2026 API pull.</p>
+    <span class="badge">Public Study Plan · Q3 · Wearable-first</span>
+    <h1>One factor: the wearable</h1>
+    <p class="tag">The Q3 plan, simplified to per-wearable headcount targets. Demographics fall out of each wearable's own mix — projected, not targeted. Current counts are the live July 1, 2026 wearable cross-tab.</p>
     <div class="stat-grid">
-      <div class="stat-card"><div class="stat-num">~445</div><div class="stat-label">Net-new target (Q3)</div></div>
+      <div class="stat-card"><div class="stat-num">449 &rarr; 1,000</div><div class="stat-label">WHOOP (Q3 target)</div></div>
+      <div class="stat-card"><div class="stat-num">114 &rarr; 500</div><div class="stat-label">Apple Watch · 1,000 stretch</div></div>
       <div class="stat-card"><div class="stat-num">$2,250</div><div class="stat-label">Ad budget (Q3)</div></div>
-      <div class="stat-card"><div class="stat-num">6</div><div class="stat-label">Studies in rotation</div></div>
-      <div class="stat-card"><div class="stat-num">8</div><div class="stat-label">Priority cohorts</div></div>
+      <div class="stat-card"><div class="stat-num">&ge;500</div><div class="stat-label">Floor per supported wearable (~10%)</div></div>
     </div>
   </div>
 
   <div class="section-label">At a glance</div>
   <div class="charts-grid">
     <div class="chart-card">
-      <h3>Q3 net-new targets by cohort</h3>
-      <div class="sub">Participants to add this quarter</div>
+      <h3>Wearable headcount — current vs Q3 target</h3>
+      <div class="sub">The only numbers anyone is held to · Apple Watch stretch = 1,000</div>
       <div class="chart-wrap"><canvas id="chart-targets"></canvas></div>
     </div>
     <div class="chart-card">
-      <h3>Ad budget allocation</h3>
-      <div class="sub">$2,250 total · paid where organic can't reach</div>
+      <h3>Ad budget by wearable build</h3>
+      <div class="sub">$2,250 total · organic carries the targets, paid tops up</div>
       <div class="chart-wrap"><canvas id="chart-budget"></canvas></div>
-    </div>
-    <div class="chart-card wide">
-      <h3>Targets by month</h3>
-      <div class="sub">Net-new per cohort across July · August · September</div>
-      <div class="chart-wrap"><canvas id="chart-months"></canvas></div>
     </div>
   </div>
 
@@ -139,20 +134,14 @@
 </div>
 
 <script>
-  // ── Charts (curated summary of the plan's key numbers; full detail renders below) ──
-  // Cohort palette — kept consistent across charts.
-  var COHORTS = ['Male','Hispanic','Apple Watch','Age 60+','Black','Fitbit','Garmin','Whoop'];
-  var COLOR = {
-    'Male':'#FB7185','Hispanic':'#74B9FF','Apple Watch':'#C8E64A','Age 60+':'#A78BFA',
-    'Black':'#60A5FA','Fitbit':'#34D399','Garmin':'#FBBF24','Whoop':'#6C5CE7'
-  };
-  var Q3_TARGET = { 'Male':175,'Hispanic':60,'Apple Watch':50,'Age 60+':50,'Black':45,'Fitbit':25,'Garmin':20,'Whoop':20 };
-  var BY_MONTH = { // [Jul, Aug, Sep]
-    'Apple Watch':[25,15,10],'Fitbit':[12,8,5],'Garmin':[9,5,6],'Male':[60,50,65],
-    'Black':[10,18,17],'Hispanic':[15,22,23],'Age 60+':[12,23,15],'Whoop':[6,6,8]
-  };
-  var BUDGET = { labels:['Male','Mainstream wearables','Black + Hispanic','Age 60+'], data:[1000,650,400,200],
-    colors:['#FB7185','#C8E64A','#74B9FF','#A78BFA'] };
+  // ── Charts (curated summary; full detail renders below) — WEARABLE-FIRST ──
+  // Current counts are the live Jul 1 2026 wearable cross-tab; targets are the held-to numbers.
+  var WEARABLES = ['WHOOP','Apple Watch'];
+  var CURRENT = { 'WHOOP':449, 'Apple Watch':114 };
+  var TARGET  = { 'WHOOP':1000, 'Apple Watch':500 };   // Apple Watch stretch = 1,000
+  var WCOLOR  = { 'WHOOP':'#6C5CE7', 'Apple Watch':'#C8E64A' };
+  var BUDGET = { labels:['WHOOP → 1,000','Apple Watch → 500','Fitbit / Garmin ride-along'],
+    data:[1050,800,400], colors:['#6C5CE7','#C8E64A','#34D399'] };
 
   try {
     if (typeof Chart !== 'undefined') {
@@ -161,38 +150,28 @@
       Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       var gridc = 'rgba(255,255,255,0.06)';
 
-      // 1) Targets by cohort — horizontal bar, per-cohort color
+      // 1) Wearable headcount — current (live) vs Q3 target, grouped horizontal bar
       new Chart(document.getElementById('chart-targets'), {
         type:'bar',
-        data:{ labels:COHORTS, datasets:[{ data:COHORTS.map(function(c){return Q3_TARGET[c];}),
-          backgroundColor:COHORTS.map(function(c){return COLOR[c];}), borderRadius:5, barThickness:16 }] },
+        data:{ labels:WEARABLES, datasets:[
+          { label:'Current (live)', data:WEARABLES.map(function(w){return CURRENT[w];}),
+            backgroundColor:'rgba(255,255,255,0.16)', borderRadius:5, barThickness:16 },
+          { label:'Q3 target', data:WEARABLES.map(function(w){return TARGET[w];}),
+            backgroundColor:WEARABLES.map(function(w){return WCOLOR[w];}), borderRadius:5, barThickness:16 }
+        ] },
         options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{display:false}, tooltip:{callbacks:{label:function(ctx){return '+'+ctx.parsed.x+' net-new';}}} },
-          scales:{ x:{beginAtZero:true, grid:{color:gridc}, ticks:{precision:0}}, y:{grid:{display:false}, ticks:{font:{size:12}}} } }
+          plugins:{ legend:{position:'top', labels:{boxWidth:12, boxHeight:12, padding:12, font:{size:12}}},
+            tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.parsed.x.toLocaleString();}}} },
+          scales:{ x:{beginAtZero:true, grid:{color:gridc}, ticks:{precision:0}}, y:{grid:{display:false}, ticks:{font:{size:13}}} } }
       });
 
-      // 2) Budget donut
+      // 2) Budget by wearable build (donut)
       new Chart(document.getElementById('chart-budget'), {
         type:'doughnut',
         data:{ labels:BUDGET.labels, datasets:[{ data:BUDGET.data, backgroundColor:BUDGET.colors, borderColor:'#0a0a0a', borderWidth:3 }] },
         options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
           plugins:{ legend:{position:'bottom', labels:{boxWidth:10, boxHeight:10, padding:10, font:{size:11}}},
             tooltip:{callbacks:{label:function(ctx){return ctx.label+': $'+ctx.parsed.toLocaleString();}}} } }
-      });
-
-      // 3) Targets by month — grouped bar: each cohort's three months side by side
-      var MONTH_COLORS = ['#C8E64A', '#74B9FF', '#A78BFA']; // Jul / Aug / Sep
-      new Chart(document.getElementById('chart-months'), {
-        type:'bar',
-        data:{ labels:COHORTS,
-          datasets:['July','August','September'].map(function(m, mi){
-            return { label:m, data:COHORTS.map(function(c){ return BY_MONTH[c][mi]; }),
-              backgroundColor:MONTH_COLORS[mi], borderWidth:0, borderRadius:4 };
-          }) },
-        options:{ responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{position:'top', labels:{boxWidth:12, boxHeight:12, padding:14, font:{size:12}}},
-            tooltip:{callbacks:{label:function(ctx){ return ctx.dataset.label + ': +' + ctx.parsed.y; }}} },
-          scales:{ x:{grid:{display:false}, ticks:{font:{size:11}}}, y:{beginAtZero:true, grid:{color:gridc}, ticks:{precision:0}} } }
       });
     }
   } catch (e) { /* charts are a bonus — fail silently, detail still renders below */ }
