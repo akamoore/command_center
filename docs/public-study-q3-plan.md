@@ -12,16 +12,17 @@ same basis as the dashboard's **Wearable-first mix** view, which shows these **l
 the source of truth**. Treat the numbers here as a dated snapshot.
 Owner: Katie · Reviewer: Pankaj · Confirm targets with Mackenzie.
 
-> **Live-count check vs. your working figures:** WHOOP live **449** (you said ~441–449 ✓) ·
-> Apple Watch live **114** (you said ~114 ✓) · Fitbit live **57** (you said ~56 ✓).
-> **No material difference** — the live feed matches. If a later pull diverges, the live
-> view wins and this snapshot gets re-stamped.
+> **Current counts now render live at the top of this plan view** — the *Primary targets*
+> and *Live vs. the plan's working figures* sections pull every wearable headcount straight
+> from the corrected feed on each load. The numbers written **in this document** are the
+> **July 1 snapshot** below; wherever the live column diverges, **the live column wins** and
+> this snapshot gets re-stamped. Don't treat the in-doc figures as current.
 
 ---
 
 ## 1. Primary targets — per-wearable headcount *(the only held-to numbers)*
 
-| Wearable | Current *(live)* | Q3 target | Stretch | Notes |
+| Wearable | Current *(Jul-1 snapshot)* | Q3 target | Stretch | Notes |
 |---|---|---|---|---|
 | **WHOOP** | **449** | **1,000** | — | The priority build (+551). Small pool — don't deplete it for WHOOP clinicals. |
 | **Apple Watch** | **114** | **500** | **1,000** | Base +386, stretch +886. Recruits easier than WHOOP (steps/movement over-index). |
