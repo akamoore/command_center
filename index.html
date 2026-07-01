@@ -4074,11 +4074,16 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { key: 'age', label: 'Age' },
     { key: 'ethnicity', label: 'Ethnicity' },
   ];
-  // Buckets the plan is actively growing → flagged "GAP".
+  // Older-age "56+" membership is derived from each bucket's OWN lower bound, so we use
+  // whatever age keys the API actually returns (56-65 / 66+ / a single 56+ / 65+ …) with
+  // no hard-coded or estimated band. Non-numeric buckets (Unknown) are never 56+.
+  const AGE_56_PLUS = key => { const m = String(key).match(/\d+/); return m ? parseInt(m[0], 10) >= 56 : false; };
+  // Buckets the plan is actively growing → flagged "GAP". Age uses the 56+ predicate
+  // above rather than fixed labels, so it always tracks the API's real buckets.
   const ECO_PRIORITY = {
     wearable: ['whoop_v2', 'whoop', 'apple_health_kit', 'apple_watch', 'fitbit'],
     gender: ['male'],
-    age: ['56-65', '66+'],
+    age: AGE_56_PLUS,
     ethnicity: ['hispanic', 'black'],
   };
   const ECO_WEARABLE_LABEL = { oura: 'Oura', whoop_v2: 'Whoop', whoop: 'Whoop', fitbit: 'Fitbit', garmin: 'Garmin', apple_health_kit: 'Apple Watch', apple_watch: 'Apple Watch' };
@@ -4112,7 +4117,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     if (!host) return;
     const studies = ecoStudiesForScope(scope);
     const eco = ecoRollup(studies);
-    const priorityOf = (dimKey, bucket) => (ECO_PRIORITY[dimKey] || []).includes(String(bucket).toLowerCase());
+    const priorityOf = (dimKey, bucket) => {
+      const p = ECO_PRIORITY[dimKey];
+      return typeof p === 'function' ? p(bucket) : (p || []).includes(String(bucket).toLowerCase());
+    };
     const labelOf = (dimKey, bucket) => dimKey === 'wearable' ? (ECO_WEARABLE_LABEL[bucket] || bucket) : bucket;
 
     const card = (dim) => {
@@ -4274,7 +4282,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { label: 'Fitbit',      dim: 'wearable',  buckets: ['fitbit'] },
     { label: 'Garmin',      dim: 'wearable',  buckets: ['garmin'] },
     { label: 'Male',        dim: 'gender',    buckets: ['Male'] },
-    { label: 'Age 56+',     dim: 'age',       buckets: ['56-65', '66+'] },
+    { label: 'Age 56+',     dim: 'age',       buckets: AGE_56_PLUS },
     { label: 'Hispanic',    dim: 'ethnicity', buckets: ['Hispanic or Latino'] },
     { label: 'Black',       dim: 'ethnicity', buckets: ['Black or African American'] },
   ];
@@ -4288,7 +4296,11 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   }
   function gapCount(dist, buckets) {
     let c = 0;
-    for (const b of buckets) c += Number(dist[b]) || 0;
+    if (typeof buckets === 'function') {
+      for (const k in dist) { if (buckets(k)) c += Number(dist[k]) || 0; }
+    } else {
+      for (const b of buckets) c += Number(dist[b]) || 0;
+    }
     return c;
   }
 
