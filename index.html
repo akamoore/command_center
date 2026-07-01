@@ -3780,8 +3780,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   function catalogStatus(study) {
     if (!study) return CATALOG_STATUS.unknown;
     const raw = String(study.statusEffective || study.status || '').trim().toLowerCase();
-    // 1. Completed — a terminal state from the study's own record.
-    if (['complete', 'completed', 'done', 'ended', 'finished'].includes(raw)) return CATALOG_STATUS.completed;
+    // 1. Completed — a terminal state from the study's own record. The public-studies
+    //    API's own status vocabulary is `live | complete | closed`, so `closed` (a
+    //    study no longer running) is treated as terminal here too, not Unknown.
+    if (['complete', 'completed', 'closed', 'done', 'ended', 'finished'].includes(raw)) return CATALOG_STATUS.completed;
     // 2. Off catalog — curated lists win over the API's stale "live"; explicit API tokens too.
     if (isOffCatalog(study.name) || isRetiredPublic(study.name)) return CATALOG_STATUS.off;
     if (['off_catalog', 'off-catalog', 'offcatalog', 'retired', 'archived', 'inactive', 'removed'].includes(raw)) return CATALOG_STATUS.off;
