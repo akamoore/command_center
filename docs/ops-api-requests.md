@@ -20,6 +20,7 @@ Endpoint in use: `GET /api/recruiting?days=<N>&scope=all` (header `x-api-key`).
 | **1** | **`launchDate: null` on some live studies** (e.g. The Monster Effect). | 🟡 Medium | Mostly done |
 | **10** | **Public studies showing end dates** — evergreen challenges shouldn't have one. | 🟡 Medium | Open |
 | **2** | **`status` should reflect completion** when a study ends. | 🟡 Medium | Partly done |
+| **11** | **Per-study active / "in study" count** — # currently enrolled and active (started, not yet completed or dropped). No live source today, so the dashboard's "In Study" column was removed rather than show a stale/derived number. | 🟡 Medium | Open |
 | **7** | **Participant-level study history** — unlocks the real public→sponsored funnel. | 🟢 Bigger lift | Open |
 | **3** | **Per-source attribution** for the acquisition funnel. | 🟢 Bigger lift | Open |
 | **4** | **Populate `funnel` + `metaAds`** in the response. | 🟢 Verify | Open |
@@ -237,6 +238,24 @@ Evergreen public / community challenges are open-ended, but some come back with 
 `endDate`. Please clear `endDate` for public challenges (keep it for time-boxed
 sponsored studies). Heads-up: if the at-risk/critical score factors in "days
 remaining," stray end dates may also be **skewing those studies' health tier**.
+
+## 11. Per-study **active / "in study"** count
+
+The Community table used to show an **In Study** column — how many participants are
+**currently enrolled and active** in each study (started onboarding, not yet completed
+or dropped). There's **no field for this in the live feed**: `/api/recruiting` returns
+`joined`, `count` (onboarded), and `completed`, but nothing for *currently active*, and
+the value only ever existed as hand-typed numbers on a handful of May-snapshot studies.
+Rather than fake it or derive a misleading `onboarded − completed` proxy (which lumps in
+dropouts), we **removed the column**. Please expose a per-study **active count** — e.g.
+
+```jsonc
+{ "experimentId": 549, "activeParticipants": 41 }   // enrolled, not yet completed/dropped
+```
+
+on `/api/recruiting` (and ideally `/api/public-studies`), and we'll restore the column
+as a live number. Note: this is distinct from the existing `at_risk` field (active **and
+non-compliant**) — `activeParticipants` should be the full active total.
 
 ---
 
