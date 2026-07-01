@@ -971,6 +971,13 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
     <div class="kpi-grid" id="ps-kpi-grid"></div>
 
     <div class="ps-section">
+      <div class="ps-section-title">Interest &amp; join-rate — keep-or-kill signal</div>
+      <div class="ps-chart-card" style="padding:0;overflow-x:auto;">
+        <div id="ps-joinrate-content"></div>
+      </div>
+    </div>
+
+    <div class="ps-section">
       <div class="ps-section-title">Completion Rate by Study</div>
       <div class="ps-chart-card">
         <div class="ps-chart-wrap tall"><canvas id="ps-chart-completion"></canvas></div>
@@ -4650,6 +4657,9 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   let psCharts = {};
   let psSortCol = 'participants';
   let psSortDir = 'desc';
+  let psJoins7d = {};          // study id/name → joins in the last 7 days (recruiting days=7)
+  let psJrSortCol = 'joins30d';
+  let psJrSortDir = 'desc';
 
   // ── Normalization helpers: shape live feed / embedded export into one model ──
 
@@ -4875,6 +4885,128 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return { score: 1, label: 'Low', color: 'var(--rose)' };
   }
 
+  // ============================================================
+  // INTEREST / JOIN-RATE — the keep-or-kill signal
+  // ============================================================
+  // Per docs/public-study-catalog-rules.md, whether a study stays or is retired is judged
+  // on recent JOINS (people STARTING the study), never on completion or compliance. The
+  // cutoff is a single, clearly-labeled value so it's easy to change while we settle it.
+  const RETIRE_IF_JOINS_90D_BELOW = 3;   // a LIVE study with fewer joins than this over the
+                                         // last ~90 days (3 calendar months) → retire candidate
+
+  // Trailing n calendar months as 'YYYY-MM', from a base 'YYYY-MM'.
+  function ymTrailing(baseYm, n) {
+    const [y, m] = String(baseYm).split('-').map(Number);
+    const out = [];
+    for (let i = 0; i < n; i++) { let mm = m - i, yy = y; while (mm <= 0) { mm += 12; yy -= 1; } out.push(yy + '-' + String(mm).padStart(2, '0')); }
+    return out;
+  }
+  // Recent-join metrics from the public-studies monthly series. 30d = the feed's exact
+  // runRate30d; 90d = trailing 3 months of joinsByMonth; lastJoin = most recent month with
+  // any joins (present for off-catalog / completed studies too); 7d = recruiting days=7.
+  function psJoinMetrics(s, baseYm) {
+    const jbm = Array.isArray(s.joinsByMonth) ? s.joinsByMonth : [];
+    const win90 = ymTrailing(baseYm, 3);
+    let joins90 = 0, lastJoinMonth = null;
+    jbm.forEach(m => {
+      const j = Number(m.joins) || 0;
+      if (win90.includes(m.month)) joins90 += j;
+      if (j > 0 && (!lastJoinMonth || m.month > lastJoinMonth)) lastJoinMonth = m.month;
+    });
+    const nm = String(s.name || '').trim().toLowerCase();
+    const j7 = psJoins7d['#' + s.id];
+    const joins7d = j7 != null ? j7 : (psJoins7d[nm] != null ? psJoins7d[nm] : null);
+    return { joins7d, joins30d: s.runRate30d == null ? null : Number(s.runRate30d), joins90d: joins90, lastJoinMonth };
+  }
+
+  function psFmtMonth(ym) {
+    if (!ym) return '—';
+    const [y, m] = String(ym).split('-').map(Number);
+    if (!y || !m) return esc(String(ym));
+    return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  }
+
+  const psJrColumns = [
+    { key: 'name', label: 'Study' },
+    { key: 'status', label: 'Status' },
+    { key: 'joins7d', label: 'Joins · 7d' },
+    { key: 'joins30d', label: 'Joins · 30d' },
+    { key: 'joins90d', label: 'Joins · 90d' },
+    { key: 'lastJoin', label: 'Last join' },
+    { key: 'retire', label: 'Retire?' },
+  ];
+
+  function psRenderJoinRate() {
+    const host = $('#ps-joinrate-content');
+    if (!host || !psModel) return;
+    const now = new Date();
+    const baseYm = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    const rows = (psModel.studies || []).map(s => {
+      const cat = catalogStatus(s);
+      const m = psJoinMetrics(s, baseYm);
+      const retire = cat.key === 'live' && (m.joins90d || 0) < RETIRE_IF_JOINS_90D_BELOW;
+      return { s, cat, joins7d: m.joins7d, joins30d: m.joins30d, joins90d: m.joins90d, lastJoinMonth: m.lastJoinMonth, retire };
+    });
+
+    const dir = psJrSortDir === 'asc' ? 1 : -1;
+    const val = (r) => {
+      switch (psJrSortCol) {
+        case 'name':     return r.s.name || '';
+        case 'status':   return r.cat.label || '';
+        case 'joins7d':  return r.joins7d == null ? -1 : r.joins7d;
+        case 'joins30d': return r.joins30d == null ? -1 : r.joins30d;
+        case 'joins90d': return r.joins90d;
+        case 'lastJoin': return r.lastJoinMonth || '0000-00';
+        case 'retire':   return r.retire ? 1 : 0;
+        default:         return 0;
+      }
+    };
+    rows.sort((a, b) => { const av = val(a), bv = val(b); return typeof av === 'string' ? av.localeCompare(bv) * dir : (av - bv) * dir; });
+
+    const live = rows.filter(r => r.cat.key === 'live');
+    const candidates = live.filter(r => r.retire);
+    const survivors = live.length - candidates.length;
+    const num = (v) => v == null ? '<span style="color:var(--text-dim);">—</span>' : fmtInt(v);
+
+    const head = psJrColumns.map(c => {
+      const sorted = psJrSortCol === c.key;
+      const arrow = sorted ? (psJrSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+      return `<th data-jrcol="${c.key}" class="${sorted ? 'sorted' : ''}" style="cursor:pointer;white-space:nowrap;">${c.label}<span class="sort-arrow">${arrow}</span></th>`;
+    }).join('');
+
+    const body = rows.map(r => {
+      const off = r.cat.key !== 'live';
+      const retireCell = r.retire
+        ? '<span style="color:#FB7185;font-weight:700;white-space:nowrap;">● Retire?</span>'
+        : (r.cat.key === 'live' ? '<span style="color:#34D399;">keep</span>' : '<span style="color:var(--text-dim);">—</span>');
+      return `<tr${off ? ' style="opacity:0.55;"' : ''}>
+        <td>${esc(r.s.name)}</td>
+        <td><span style="color:${r.cat.color};font-weight:600;white-space:nowrap;">${r.cat.dot} ${r.cat.label}</span></td>
+        <td class="num">${num(r.joins7d)}</td>
+        <td class="num">${num(r.joins30d)}</td>
+        <td class="num" style="font-weight:700;color:${(r.joins90d || 0) < RETIRE_IF_JOINS_90D_BELOW && r.cat.key === 'live' ? '#FB7185' : 'var(--text)'};">${fmtInt(r.joins90d)}</td>
+        <td style="white-space:nowrap;">${psFmtMonth(r.lastJoinMonth)}</td>
+        <td>${retireCell}</td>
+      </tr>`;
+    }).join('');
+
+    host.innerHTML = `
+      <div style="padding:14px 18px 2px;font-size:12px;color:var(--text-dim);line-height:1.6;">
+        Keep-or-kill is judged on <strong style="color:var(--text-secondary);">recent joins (starts)</strong> — never completion or compliance.
+        <strong style="color:var(--text);">7d</strong> from <code style="color:var(--text-secondary);">/api/recruiting?days=7</code>, <strong style="color:var(--text);">30d</strong> from <code style="color:var(--text-secondary);">runRate30d</code>, <strong style="color:var(--text);">90d</strong> = trailing 3 months of <code style="color:var(--text-secondary);">joinsByMonth</code>. Last-join is month-level — the feed exposes no day-precise timestamp.
+      </div>
+      <div style="padding:8px 18px 14px;">
+        <div style="display:inline-flex;gap:14px;flex-wrap:wrap;align-items:center;background:rgba(251,113,133,0.08);border:1px solid rgba(251,113,133,0.25);border-radius:10px;padding:10px 14px;font-size:12px;">
+          <span><strong style="color:#FB7185;">Retire candidates: ${candidates.length}</strong></span>
+          <span style="color:var(--text-dim);">rule: live study with &lt; <strong style="color:var(--text);">${RETIRE_IF_JOINS_90D_BELOW}</strong> joins in 90d · adjust <code style="color:var(--text-secondary);">RETIRE_IF_JOINS_90D_BELOW</code> in the code</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:10px;">
+          <strong style="color:var(--text);">Catalog if retired:</strong> ${live.length} live &rarr; <strong style="color:#34D399;">${survivors} kept</strong>${candidates.length ? ' · <span style="color:#FB7185;">' + candidates.length + ' retired</span> — ' + candidates.map(r => esc(r.s.name)).join(', ') : ' · none flagged'}
+        </div>
+      </div>
+      <table class="ps-table" id="ps-joinrate-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+  }
+
   function psRenderTable() {
     const studies = psModel.studies.slice().sort((a, b) => {
       if (psSortCol === 'status') {
@@ -4974,9 +5106,25 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         model = psNormalizeExport();
       }
       psModel = model;
+      // 7-day joins from a dedicated recruiting window (independent of the main dashboard's
+      // day toggle). Non-blocking — degrades to "—" per study if unavailable/unmatched.
+      try {
+        const rec7 = await dataService.fetchRecruitingData(7);
+        const by = (rec7 && rec7.onboarding && rec7.onboarding.byStudy) || [];
+        const map = {};
+        by.forEach(e => {
+          const j = e.joined ?? e.joins ?? e.count;
+          if (j == null) return;
+          const nm = String(e.studyName || e.experimentTitle || e.name || '').trim().toLowerCase();
+          if (nm) map[nm] = Number(j) || 0;
+          if (e.experimentId != null) map['#' + e.experimentId] = Number(j) || 0;
+        });
+        psJoins7d = map;
+      } catch (e) { psJoins7d = {}; }
       psDestroyCharts();
       psRenderSourceBadge(model);
       psRenderKPIs();
+      psRenderJoinRate();
       psRenderCompletionChart();
       psCharts.gender = psDoughnut('#ps-chart-gender', psModel.gender);
       psCharts.age = psBar('#ps-chart-age', psModel.age);
@@ -5006,6 +5154,16 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     document.getElementById('tab-command-center').hidden = (tab !== 'command-center');
     document.getElementById('tab-public-studies').hidden = (tab !== 'public-studies');
     if (tab === 'public-studies') psRenderAll();
+  });
+
+  // Join-rate table sorting (delegated from the persistent container — the table is re-rendered)
+  document.getElementById('ps-joinrate-content').addEventListener('click', e => {
+    const th = e.target.closest('th[data-jrcol]');
+    if (!th) return;
+    const col = th.dataset.jrcol;
+    if (psJrSortCol === col) psJrSortDir = psJrSortDir === 'asc' ? 'desc' : 'asc';
+    else { psJrSortCol = col; psJrSortDir = col === 'name' ? 'asc' : 'desc'; }
+    psRenderJoinRate();
   });
 
   // Per-study detail table sorting
