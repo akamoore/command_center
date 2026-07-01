@@ -3372,12 +3372,17 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     const sponsoredConv = sponsoredJoined > 0 ? (sponsoredOnboarded / sponsoredJoined * 100).toFixed(1) : 0;
     const overallConv = allJoined > 0 ? (totalOnboarded / allJoined * 100).toFixed(1) : 0;
 
-    // Lead → Join → Onboard funnel numbers
+    // Lead → Join → Onboard funnel — AD-LEAD studies only (Sponsored + VEP). Public
+    // challenges have no ad-lead stage, so they're excluded from the funnel and shown
+    // separately in the breakdown below. totalJoined already = sponsored + VEP joins.
+    const adOnboarded = sponsoredOnboarded + vepOnboarded;
+    const funnelLost = Math.max(0, totalLeads - adOnboarded);   // ad leads that never reached onboarded
     const leadToJoinPct = totalLeads > 0 ? (totalJoined / totalLeads * 100).toFixed(1) : 0;
-    const joinToOnboardPct = allJoined > 0 ? (totalOnboarded / allJoined * 100).toFixed(1) : 0;
+    const joinToOnboardPct = totalJoined > 0 ? (adOnboarded / totalJoined * 100).toFixed(1) : 0;
 
     container.innerHTML = `
-      <!-- Mini funnel: Leads → Joined → Onboarded -->
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">Funnel = <strong style="color:var(--text-secondary);">ad-lead studies only</strong> (Sponsored + VEP). Public challenges have no ad-lead stage &mdash; they&rsquo;re shown separately in the breakdown below.</div>
+      <!-- Mini funnel: Leads → Joined → Onboarded (ad-lead studies only) -->
       <div style="display:flex;align-items:center;gap:0;margin-bottom:20px;flex-wrap:wrap;">
         <div style="text-align:center;padding:14px 20px;background:rgba(108,92,231,0.08);border-radius:10px;min-width:120px;">
           <div style="font-size:28px;font-weight:700;color:var(--indigo);">${fmtInt(totalLeads)}</div>
@@ -3388,20 +3393,20 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
           <div style="font-size:11px;font-weight:600;color:${parseFloat(leadToJoinPct) >= 30 ? 'var(--green)' : 'var(--yellow)'};">${leadToJoinPct}%</div>
         </div>
         <div style="text-align:center;padding:14px 20px;background:rgba(96,165,250,0.08);border-radius:10px;min-width:120px;">
-          <div style="font-size:28px;font-weight:700;color:var(--blue);">${fmtInt(allJoined)}</div>
-          <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;">Joined</div>
+          <div style="font-size:28px;font-weight:700;color:var(--blue);">${fmtInt(totalJoined)}</div>
+          <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;">Joined <span style="text-transform:none;letter-spacing:0;opacity:0.7;">(ad-lead)</span></div>
         </div>
         <div style="padding:0 10px;text-align:center;">
           <div style="font-size:14px;color:var(--text-dim);">→</div>
           <div style="font-size:11px;font-weight:600;color:${parseFloat(joinToOnboardPct) >= 50 ? 'var(--green)' : 'var(--yellow)'};">${joinToOnboardPct}%</div>
         </div>
         <div style="text-align:center;padding:14px 20px;background:rgba(52,211,153,0.08);border-radius:10px;min-width:120px;">
-          <div style="font-size:28px;font-weight:700;color:var(--green);">${fmtInt(totalOnboarded)}</div>
-          <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;">Onboarded</div>
+          <div style="font-size:28px;font-weight:700;color:var(--green);">${fmtInt(adOnboarded)}</div>
+          <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;">Onboarded <span style="text-transform:none;letter-spacing:0;opacity:0.7;">(ad-lead)</span></div>
         </div>
         <div style="padding:0 10px;text-align:center;">
           <div style="font-size:14px;color:var(--text-dim);">→</div>
-          <div style="font-size:11px;font-weight:600;color:var(--rose);">${fmtInt(noStudy)} lost</div>
+          <div style="font-size:11px;font-weight:600;color:var(--rose);" title="Ad leads that never reached onboarded (leads − onboarded).">${fmtInt(funnelLost)} lost</div>
         </div>
       </div>
 
