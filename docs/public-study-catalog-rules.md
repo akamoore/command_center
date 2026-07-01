@@ -1,60 +1,48 @@
 # Public Study Catalog — operating rules
 
-Written-down rules for how the public-study catalog is sized, rotated, and pruned,
-so keep/kill decisions follow a policy rather than a gut call (per Pankaj). Pairs
-with the dashboard's join-rate view (once built) and the `public-study-q3-plan.md`.
-
-**Status:** working draft. The live-study target number is **set by the data once the
-7-/30-day join-rate view exists** — not guessed. Numbers below the join-rate view
-depends on are flagged pending the data-integrity fixes (see `ops-api-requests.md`).
+How we size, rotate, and prune the public-study catalog, so keep/kill is a **policy, not
+a gut call**. Share with the team. The live signals behind these rules are on the
+dashboard's **Interest & join-rate** view (Public Studies tab).
 
 ---
 
-## 1. How many studies are live at once
+## 1. How many studies run at once — **TBD**
 
 - **Today:** ~14–15 live public studies.
-- **Direction:** **fewer.** A smaller catalog creates scarcity and a sense of newness;
-  a sprawling one dilutes attention and makes everything look stale.
-- **Candidate targets discussed:** 3 · 5 · 10. **Don't lock a number yet** — let the
-  join-rate data set it once the velocity view is live. Interim guidance: lean toward
-  fewer, retire the clearly-dead ones first.
+- **Direction:** **fewer.** A smaller, rotating set creates **scarcity and newness**; a
+  sprawling catalog dilutes attention and makes everything look stale.
+- **Exact number is TBD** — set by the **join-rate data**, not guessed. Locked once we've
+  watched velocity for a cycle. Interim: lean fewer, retire the clearly-dead ones first.
 
-## 2. Rotation cadence
+## 2. Rotation cadence — ~every 3 months
 
-- **Recycle the catalog roughly every 3 months:** add a few new studies, retire a few,
-  cycle them through.
-- **Exception:** a study that's clearly *hot* (strong, sustained join rate) stays — don't
+- Roughly **every 3 months**, retire a few and add a few — cycle the catalog.
+- **Exception:** a study **clearly performing** (strong, sustained join rate) stays. Don't
   retire a winner on a calendar.
 
-## 3. Keep-or-kill metric — **interest**
+## 3. Keep or kill = **interest** (recent join rate)
 
-The single signal for whether a study stays or goes is **recent join rate** — *people
-starting the study, not finishing it.*
+- The **one** signal that retires a study is **interest = recent joins** (people *starting*
+  it), measured on a **7-day and 30-day** window.
+- **Collapse → retirement candidate:** if new joins dry up over a **1–2 week** window, flag
+  it to retire.
+- Completion and compliance do **not** retire a study — only interest does.
 
-- Measured on a **7-day and 30-day** window (plus last-join date).
-- **Collapse → retire:** if interest dries up (e.g. ~1 join over a week or two), pull it.
-- **Current reads (pending the count fix):**
-  - **Monster** — retire candidate (no one joining).
-  - **Celsius, Ghost** — keepers (still pulling joins).
+## 4. Compliance is a **separate, secondary** signal — our problem to fix
 
-## 4. Compliance is **secondary** — it's *our* problem, not a kill trigger
+Three different things, don't conflate them:
 
-- **Completion ≠ compliance ≠ interest.** Define each explicitly on the dashboard:
-  - **Interest** — recent join rate (the keep/kill lever).
-  - **Completion** — % of joiners who finish the study.
-  - **Compliance** — % adhering to the protocol (logging / wearing) *during* the study.
-- **High interest + low compliance does NOT retire a study.** It flags a **study-design
-  or nudging problem for us to fix** (onboarding, reminders, protocol friction).
-- So compliance is the lever that **flags a study for redesign**, never the lever that
-  **retires** it. Only interest retires.
+- **Interest** — recent join rate → the keep/kill lever (§3).
+- **Completion** — % of joiners who finish the study.
+- **Compliance** — % adhering to the protocol (logging / wearing) **during** the study.
+
+**Low compliance never retires a study.** High interest + low compliance means the problem
+is **ours to fix** — study design, difficulty, or nudging (onboarding, reminders, protocol
+friction) → **redesign, not removal.**
 
 ---
 
-## Decision log / open items
+**Open item:** lock the §1 live-study number once the join-rate view has a full cycle of
+data behind it. Everything else above is agreed.
 
-- **Lock the live-study target** (3 / 5 / 10 / other) once the join-rate view exists — data sets it.
-- **Define & wire compliance as a real %** across all studies, and confirm it is *excluded*
-  from the retire decision and *included* only as a redesign flag.
-- Confirm the join-rate window definitions and last-join-date source with Manpreet.
-
-Owner: Katie · Reviewer: Pankaj · Working draft — numbers confirmed before commit.
+Owner: Katie · Reviewer: Pankaj
