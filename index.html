@@ -3348,19 +3348,19 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // ============================================================
   function renderEngagement() {
     const container = $('#engagement-content');
-    // Live source — the same enriched studies every other panel uses, NOT the hardcoded
-    // STUDIES snapshot (which drifted stale, e.g. Nature Dose was frozen at 73/62). For
-    // public challenges we reconcile "joined" to the lifetime participants count the
-    // Community table shows (from /api/public-studies) so the two panels can't disagree;
-    // everything else uses the live apiJoins/apiOnboarded resolvers.
-    const rawEng = dataService.getEnrichedStudies ? dataService.getEnrichedStudies() : STUDIES;
-    const engStudies = rawEng.map(s => s.type === 'PUBLIC'
-      ? { ...s, joined: (psParticipantsFor(s) ?? studyJoined(s) ?? 0), onboarded: studyOnboarded(s) }
-      : { ...s, joined: studyJoined(s), onboarded: studyOnboarded(s) });
-    const yearFiltered = selectedYear === 'all' ? engStudies : engStudies.filter(s => {
+    // This is a LIFETIME funnel. The recruiting API's `joined` is a 30-day window — it
+    // returns 0 for completed studies, which wrongly zeroed the VEP panel (all its studies
+    // finished in 2025). So VEP + sponsored keep their curated lifetime joined/onboarded;
+    // only public challenges swap in the live lifetime participants count
+    // (/api/public-studies) so they match the Community table and aren't stale (Nature Dose
+    // 73 → 105). Onboarded stays curated (there's no clean live lifetime onboarded).
+    const base = selectedYear === 'all' ? STUDIES : STUDIES.filter(s => {
       const yr = parseInt(selectedYear);
       return s.launchYear === yr || s.crossYear || (!s.launchYear && s.status === 'coming');
     });
+    const yearFiltered = base.map(s => s.type === 'PUBLIC'
+      ? { ...s, joined: (psParticipantsFor(s) ?? s.joined ?? 0) }
+      : s);
     // Studies with ad-lead data (VEP, RCT, RWE)
     const leadStudies = yearFiltered.filter(s => s.status !== 'coming' && s.leads != null && s.leads > 0);
     // Public studies don't come through ad leads — include if anyone joined
