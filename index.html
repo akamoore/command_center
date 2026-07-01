@@ -1208,6 +1208,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // so it can never match the real, month-tagged studies it sits next to.
   const EXCLUDED_NAMES = [
     'cure hydration', 'optimize her retreat',
+    // ── Removed as test/internal (Katie, Jul 2026): NAD+ Beverage + both Caffeine Effect studies ──
+    'nad+ beverage', 'caffeine effect',   // 'caffeine effect' catches "Caffeine Effect" and "Caffeine Effect (W)"
     // ── Test / QA studies — never surface in the dashboard or reports ──
     'nuchido 2',                   // Sleep & Stress Nuchido 2 (test, clinic)
     'nuchido 3',                   // Sleep & Stress Nuchido 3 (test, public)
@@ -1231,6 +1233,19 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   const isExcludedStudyName = name => {
     const n = (name || '').toLowerCase();
     return EXCLUDED_NAMES.some(ex => n.includes(ex)) || isTestInternalStudy(name);
+  };
+
+  // Curated study-TYPE overrides — force a study's category when the feed mislabels it.
+  // SeptaSync and Essentials Nutrition Shake are partner (VEP) studies the API returns
+  // as "Public"; categorize them as VEP everywhere (matched lowercase, substring).
+  const STUDY_TYPE_OVERRIDES = [
+    { match: 'septasync', type: 'VEP' },
+    { match: 'essentials nutrition shake', type: 'VEP' },
+  ];
+  const typeOverrideFor = name => {
+    const n = String(name || '').toLowerCase();
+    const hit = STUDY_TYPE_OVERRIDES.find(o => n.includes(o.match));
+    return hit ? hit.type : null;
   };
 
   // ============================================================
@@ -1614,7 +1629,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
           status: localMatch?.status === 'complete' ? 'complete' : (normStatus(entry.status) ?? localMatch?.status ?? 'active'),
           // Type prefers the curated local value (keeps retired VEP tags);
           // the mapped API type is only a fallback for API-only studies.
-          type: localMatch?.type ?? normType(entry.type) ?? 'RWE',
+          type: typeOverrideFor(displayName) ?? localMatch?.type ?? normType(entry.type) ?? 'RWE',
           target: entry.target ?? localMatch?.target ?? 0,
           joined: joinsVal ?? localMatch?.joined ?? null,
           leads: entry.leads ?? localMatch?.leads ?? null,
@@ -2936,13 +2951,18 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const compPct = s.target > 0 ? (displayOnboarded / s.target * 100) : null;
       const compColor = compPct != null ? (compPct >= 100 ? 'var(--green)' : compPct >= 80 ? 'var(--yellow)' : 'var(--rose)') : '';
       const sizeBadgeMap = { pilot: 'badge-gray', medium: 'badge-blue', large: 'badge-indigo' };
+      // Shade + relabel studies no longer live on the participant catalog, so retired
+      // public studies still in the breakdown are visibly de-emphasized (single source
+      // of truth = catalogStatus()).
+      const cs = catalogStatus(s);
+      const offCat = cs.key === 'off';
 
-      return `<tr>
+      return `<tr${offCat ? ' style="opacity:0.5;" title="Off the participant catalog — no longer live/active"' : ''}>
         <td class="align-right">${s.id}</td>
         <td>${esc(s.name)}</td>
         <td>${typeBadge(s.type)}</td>
         <td><span class="badge ${sizeBadgeMap[s.size_category] || 'badge-gray'}">${(s.size_category || '—').charAt(0).toUpperCase() + (s.size_category || '').slice(1)}</span></td>
-        <td>${statusBadge(s.status)}</td>
+        <td>${offCat ? '<span class="badge badge-gray" title="No longer live/active on the participant catalog">○ Off catalog</span>' : statusBadge(s.status)}</td>
         <td>${s.launchDate || '—'}</td>
         <td>${s.endDate || '—'}</td>
         <td class="align-right">${spendCell}</td>
@@ -3328,7 +3348,16 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // ============================================================
   function renderEngagement() {
     const container = $('#engagement-content');
-    const yearFiltered = selectedYear === 'all' ? STUDIES : STUDIES.filter(s => {
+    // Live source — the same enriched studies every other panel uses, NOT the hardcoded
+    // STUDIES snapshot (which drifted stale, e.g. Nature Dose was frozen at 73/62). For
+    // public challenges we reconcile "joined" to the lifetime participants count the
+    // Community table shows (from /api/public-studies) so the two panels can't disagree;
+    // everything else uses the live apiJoins/apiOnboarded resolvers.
+    const rawEng = dataService.getEnrichedStudies ? dataService.getEnrichedStudies() : STUDIES;
+    const engStudies = rawEng.map(s => s.type === 'PUBLIC'
+      ? { ...s, joined: (psParticipantsFor(s) ?? studyJoined(s) ?? 0), onboarded: studyOnboarded(s) }
+      : { ...s, joined: studyJoined(s), onboarded: studyOnboarded(s) });
+    const yearFiltered = selectedYear === 'all' ? engStudies : engStudies.filter(s => {
       const yr = parseInt(selectedYear);
       return s.launchYear === yr || s.crossYear || (!s.launchYear && s.status === 'coming');
     });
