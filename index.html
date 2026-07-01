@@ -4098,6 +4098,11 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   let ecoData = null;        // cached /api/demographics payload
   let ecoScope = 'all';      // 'all' | 'public' | <study id>
   let gapCompletion = null;  // study id/name → completionRate (from /api/public-studies), for the Gap cross-tab
+  // Wearable-first view: real wearable×demographic cross-tabs from /api/demographics?groupBy=wearable,<dim>.
+  let wearableMix = null;    // { <wearable>: { total, gender:{}, age:{}, ethnicity:{} } } — real joint counts
+  let wmProjWearable = null; // projection: selected wearable slug
+  let wmProjAdd = 0;         // projection: additional people to add
+  const MIN_WEARABLE_N = 30; // below this a wearable is "too small to break down" — show raw count, not %s
 
   function ecoRollup(studies) {
     // Roll the per-study marginals up to a single total for the given studies.
@@ -4222,6 +4227,124 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">${cards || '<div style="color:var(--text-dim);font-size:13px;">No demographic breakdown reported for this selection.</div>'}</div>`;
   }
 
+  // ── Wearable-first analysis: flip the breakdown to lead with the wearable. For each
+  //    wearable, its internal gender/age/ethnicity mix as REAL % of that wearable's users
+  //    (joint counts from the API cross-tab — never derived from marginals), plus a
+  //    projection layer. Wearables below MIN_WEARABLE_N show a raw count, not a % mix.
+  function wmParseCross(resp, dimKey, acc) {
+    const cells = (resp && resp.crossTab && resp.crossTab.cells) || [];
+    cells.forEach(c => {
+      const w = c && c.keys && c.keys.wearable;
+      const b = c && c.keys && c.keys[dimKey];
+      if (w == null || b == null) return;
+      const rec = (acc[w] = acc[w] || { total: 0, gender: {}, age: {}, ethnicity: {} });
+      rec[dimKey][b] = (rec[dimKey][b] || 0) + (Number(c.count) || 0);
+    });
+  }
+  // Rows for one dimension: each bucket as % of that dimension's own total (so it sums to
+  // 100% within the dimension) + the raw count. Unknown sorts last. No smoothing.
+  function wmDimRows(dist) {
+    const entries = Object.entries(dist || {}).map(([k, v]) => [k, Number(v) || 0])
+      .sort((a, b) => (a[0] === 'Unknown' ? 1 : b[0] === 'Unknown' ? -1 : b[1] - a[1]));
+    const total = entries.reduce((a, [, n]) => a + n, 0);
+    if (!entries.length) return '<div style="font-size:11px;color:var(--text-dim);">—</div>';
+    return entries.map(([b, n]) => {
+      const pct = total ? n / total * 100 : 0;
+      return `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;margin-bottom:2px;">
+        <span style="color:${b === 'Unknown' ? 'var(--text-dim)' : 'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(b)}</span>
+        <span style="color:var(--text-dim);white-space:nowrap;">${pct.toFixed(0)}% · ${fmtInt(n)}</span></div>`;
+    }).join('');
+  }
+
+  async function renderWearableMix() {
+    const host = $('#wearable-mix');
+    if (!host) return;
+    const title = '<div class="ps-section-title">Wearable-first mix &amp; projection</div>';
+    if (!wearableMix) {
+      host.innerHTML = title + '<div style="color:var(--text-dim);font-size:13px;padding:8px 0;">Loading wearable cross-tabs…</div>';
+      try {
+        const [g, a, e] = await Promise.all([
+          dataService.fetchDemographics('?groupBy=wearable,gender'),
+          dataService.fetchDemographics('?groupBy=wearable,age'),
+          dataService.fetchDemographics('?groupBy=wearable,ethnicity'),
+        ]);
+        const acc = {};
+        wmParseCross(g, 'gender', acc);
+        wmParseCross(a, 'age', acc);
+        wmParseCross(e, 'ethnicity', acc);
+        Object.values(acc).forEach(r => {
+          r.total = Object.values(r.gender).reduce((x, y) => x + y, 0)
+            || Object.values(r.age).reduce((x, y) => x + y, 0);
+        });
+        wearableMix = acc;
+      } catch (err) {
+        host.innerHTML = title + `<div style="color:var(--text-dim);font-size:13px;padding:8px 0;">Wearable cross-tab unavailable — ${esc(err.message)}. Needs <code style="color:var(--text-secondary);">/api/demographics?groupBy=wearable,&lt;dim&gt;</code>.</div>`;
+        return;
+      }
+    }
+
+    const wearables = Object.keys(wearableMix).filter(w => w && String(w).toLowerCase() !== 'unknown');
+    const gotJoint = wearables.some(w => Object.keys(wearableMix[w].gender || {}).length > 0);
+    if (!wearables.length || !gotJoint) {
+      host.innerHTML = title + `<div style="color:var(--text-dim);font-size:13px;padding:8px 0;">The wearable&times;demographic cross-tab returned no joint cells — <code style="color:var(--text-secondary);">groupBy=wearable,&lt;dim&gt;</code> may not be supported yet. I won't derive it from marginals (that would be fabricated). Ask the data team to enable multi-dimension <code>groupBy</code>.</div>`;
+      return;
+    }
+    wearables.sort((a, b) => (wearableMix[b].total || 0) - (wearableMix[a].total || 0));
+    if (wmProjWearable == null || !wearableMix[wmProjWearable]) wmProjWearable = wearables[0];
+
+    const cards = wearables.map(w => {
+      const r = wearableMix[w];
+      const label = ECO_WEARABLE_LABEL[w] || w;
+      if ((r.total || 0) < MIN_WEARABLE_N) {
+        return `<div class="ps-chart-card" style="padding:16px;">
+          <h3 style="margin:0 0 6px;font-size:14px;">${esc(label)}</h3>
+          <div style="color:#FBBF24;font-size:12px;">${fmtInt(r.total || 0)} users — too small to break down reliably; raw count shown, no %.</div></div>`;
+      }
+      const dim = (name, dist) => `<div style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin:8px 0 4px;">${name}</div>${wmDimRows(dist)}`;
+      return `<div class="ps-chart-card" style="padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><h3 style="margin:0;font-size:14px;">${esc(label)}</h3><span style="font-size:12px;color:var(--lime);font-weight:700;">${fmtInt(r.total)} users</span></div>
+        ${dim('Gender', r.gender)}${dim('Age', r.age)}${dim('Ethnicity', r.ethnicity)}</div>`;
+    }).join('');
+
+    const pw = wmProjWearable, pr = wearableMix[pw] || { total: 0, gender: {}, age: {}, ethnicity: {} };
+    const projRows = (dist) => {
+      const entries = Object.entries(dist || {}).map(([k, v]) => [k, Number(v) || 0])
+        .sort((a, b) => (a[0] === 'Unknown' ? 1 : b[0] === 'Unknown' ? -1 : b[1] - a[1]));
+      const total = entries.reduce((a, [, n]) => a + n, 0);
+      return entries.map(([b, n]) => {
+        const pct = total ? n / total : 0;
+        const proj = Math.round(n + wmProjAdd * pct);
+        return `<tr><td>${esc(b)}</td><td class="num">${fmtInt(n)}</td><td class="num" style="color:var(--lime);font-weight:600;">${fmtInt(proj)}</td><td class="num" style="color:var(--text-dim);">${(pct * 100).toFixed(0)}%</td></tr>`;
+      }).join('');
+    };
+    const projTable = (name, dist) => `<div>
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">${name}</div>
+      <table class="ps-table" style="font-size:11px;width:100%;"><thead><tr><th>${name}</th><th class="num">Now</th><th class="num">Proj.</th><th class="num">%</th></tr></thead><tbody>${projRows(dist)}</tbody></table></div>`;
+
+    const projBody = (pr.total || 0) < MIN_WEARABLE_N
+      ? `<div style="color:#FBBF24;font-size:12px;">${fmtInt(pr.total || 0)} users — too small to project a reliable mix.</div>`
+      : `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">${projTable('Gender', pr.gender)}${projTable('Age', pr.age)}${projTable('Ethnicity', pr.ethnicity)}</div>`;
+
+    host.innerHTML = title + `
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.6;">Each wearable's <strong style="color:var(--text-secondary);">internal</strong> gender / age / ethnicity mix, as real % of that wearable's own users — joint counts from <code style="color:var(--text-secondary);">/api/demographics?groupBy=wearable,&lt;dim&gt;</code>, never derived from marginals. Wearables under ${MIN_WEARABLE_N} users show a raw count only.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">${cards}</div>
+      <div class="ps-chart-card" style="padding:18px;margin-top:20px;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+          <span style="font-size:13px;font-weight:700;">Project: add</span>
+          <input id="wm-proj-add" type="number" min="0" step="50" value="${wmProjAdd}" style="width:110px;background:var(--bg-raised);color:var(--text);border:1px solid rgba(200,230,74,0.4);border-radius:8px;padding:8px 10px;font-size:14px;">
+          <span style="font-size:13px;font-weight:700;">people to</span>
+          <select id="wm-proj-wearable" style="background:var(--bg-raised);color:var(--text);border:1px solid rgba(200,230,74,0.4);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:600;cursor:pointer;">
+            ${wearables.map(w => `<option value="${esc(w)}"${w === pw ? ' selected' : ''}>${esc(ECO_WEARABLE_LABEL[w] || w)}</option>`).join('')}
+          </select>
+          <span style="font-size:12px;color:var(--text-dim);">projected mix holds ${esc(ECO_WEARABLE_LABEL[pw] || pw)}'s current internal %s · current vs projected side by side</span>
+        </div>
+        ${projBody}</div>`;
+
+    const addEl = $('#wm-proj-add'), wEl = $('#wm-proj-wearable');
+    if (addEl) addEl.addEventListener('change', () => { wmProjAdd = Math.max(0, parseInt(addEl.value, 10) || 0); renderWearableMix(); });
+    if (wEl) wEl.addEventListener('change', () => { wmProjWearable = wEl.value; renderWearableMix(); });
+  }
+
   async function renderEcosystem() {
     const el = $('#ecosystem-content');
     if (!el || ecosystemLoaded) return;
@@ -4258,7 +4381,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         </div>
         <span style="font-size:12px;color:var(--text-dim);">Pick any single study to see its own demographic mix.</span>
       </div>
-      <div id="eco-cards"></div>`;
+      <div id="eco-cards"></div>
+      <div id="wearable-mix" style="margin-top:36px;"></div>`;
 
     const sel = $('#eco-scope');
     if (sel) {
@@ -4266,6 +4390,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       sel.addEventListener('change', () => { ecoScope = sel.value; ecoRenderCards(ecoScope); });
     }
     ecoRenderCards(ecoScope);
+    renderWearableMix();
     // Completion rates for the Gap → Top Studies retention figure come from the
     // public-studies feed — fetch once, key by id and name, then render the cross-tab.
     try {
