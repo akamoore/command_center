@@ -14,7 +14,7 @@ Endpoint in use: `GET /api/recruiting?days=<N>&scope=all` (header `x-api-key`).
 
 | # | Ask | Priority | Status |
 |---|-----|----------|--------|
-| **6** | **`GET /api/public-studies` feed** — the Public Studies Analytics tab is stuck on a stale May-15 snapshot; the route currently **307-redirects to `/login`** (our `x-api-key` isn't honored there). | 🔴 High | Open |
+| **6** | **`GET /api/public-studies` feed** — now returns live data (studies + per-study `demographics`). The dashboard reads it directly and the embedded May-15 fallback was retired. | 🔴 High | ✅ Done |
 | **8** | **Study health score + tier in `/api/recruiting`** — expose the On Track / At Risk / Critical score you already compute, per study. | 🔴 High | Open |
 | **9** | **Off-catalog studies still report `status: "live"`** — retired challenges leak into the dashboard. | 🟡 Medium | Open |
 | **1** | **`launchDate: null` on some live studies** (e.g. The Monster Effect). | 🟡 Medium | Mostly done |
@@ -26,7 +26,7 @@ Endpoint in use: `GET /api/recruiting?days=<N>&scope=all` (header `x-api-key`).
 | **4** | **Populate `funnel` + `metaAds`** in the response. | 🟢 Verify | Open |
 | **5** | **Consistent enums** (status / type). | 🟢 Nice-to-have | Open |
 
-**✅ Already shipped — thank you:** public/community studies now returned (#1) · numeric `days` (#2) · the at-risk/critical health-score breakdown (captured in #8).
+**✅ Already shipped — thank you:** public/community studies now returned (#1) · numeric `days` (#2) · the at-risk/critical health-score breakdown (captured in #8) · the **public-studies feed is now live** (#6).
 
 Full detail for each item below. ↓
 
@@ -101,16 +101,13 @@ The dashboard normalizes these client-side, so this is optional cleanup:
 
 ## 6. Real-time feed for the **Public Studies Analytics** tab  ⭐  (endpoint: `GET /api/public-studies`)
 
-**Status — the dashboard side is already built and live.** It calls
-`GET /api/public-studies` (same `x-api-key`, no query params) on every visit and
-will switch to real-time data **automatically** the moment the endpoint returns
-it — no further dashboard changes needed. Until then the tab falls back to a
-**static May 15, 2026 manual export** that is now badly stale.
-
-**Current behavior:** `GET /api/public-studies` with our `x-api-key` returns
-**`HTTP 307 → /login`** — the same key works on `/api/recruiting`, so it isn't an
-auth-key problem; the route just isn't exposed as a data API yet. We need it to
-return the payload below.
+**✅ Resolved (Jul 1, 2026).** `GET /api/public-studies` now returns live data —
+studies with per-study `demographics` (`ageRange` incl. `56-65` / `66+`, `gender`,
+`region`), plus `runRate30d`, `joinsByMonth`, and `status` / `statusEffective`. The
+dashboard reads it directly on every visit, and the embedded May-15 export fallback
+has been **retired**: if the feed is ever down the tab shows an explicit
+"unavailable" state rather than a stale snapshot. No further action needed — the
+original payload spec is kept below for reference.
 
 **Exact response shape the tab consumes** — match these field names and it drops
 straight in with zero rework:

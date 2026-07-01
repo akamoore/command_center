@@ -4475,7 +4475,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { label: 'Fitbit',      dim: 'wearable',  buckets: ['fitbit'] },
     { label: 'Garmin',      dim: 'wearable',  buckets: ['garmin'] },
     { label: 'Male',        dim: 'gender',    buckets: ['Male'] },
-    { label: 'Age 56+',     dim: 'age',       buckets: AGE_56_PLUS },
+    { label: 'Age 56–65',   dim: 'age',       buckets: ['56-65'] },
+    { label: 'Age 66+',     dim: 'age',       buckets: ['66+'] },
     { label: 'Hispanic',    dim: 'ethnicity', buckets: ['Hispanic or Latino'] },
     { label: 'Black',       dim: 'ethnicity', buckets: ['Black or African American'] },
   ];
@@ -4808,42 +4809,12 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   loadAndRender();
 
   // ============================================================
-  // PUBLIC STUDIES TAB — embedded data from Manpreet's May 15 export
+  // PUBLIC STUDIES TAB — 100% live from GET /api/public-studies.
+  // The embedded May-15 export fallback was retired once that feed went live:
+  // on failure we show an explicit "unavailable" state (see psRenderUnavailable)
+  // rather than a stale/estimated snapshot, so NO demographic numbers are
+  // hardcoded anywhere in this file.
   // ============================================================
-  const PS_DATA = {
-    gender: { 'Female': 1042, 'Male': 380, 'Unknown': 85, 'Prefer Not to Say': 3 },
-    age: { '<18': 5, '18–25': 83, '26–35': 279, '36–45': 322, '46–55': 277, '56–65': 113, '66+': 22 },
-    ethnicity: {
-      'Caucasian / White': 729, 'Unknown': 156, 'Asian / Pacific Islander': 96,
-      'Hispanic / Latino': 88, 'Black / African American': 47, 'Mixed Race': 18,
-      'Other': 13, 'Prefer Not to State': 8, 'Arab': 8,
-      'Native American / American Indian': 2, 'Indigenous / Aboriginal': 2,
-    },
-    wearables: { 'Oura': 1149, 'Unknown': 139, 'WHOOP v2': 115, 'Apple Health': 91, 'Garmin': 40, 'Fitbit': 38 },
-    studies: [
-      { id: 492, name: 'The 4-7-8 Effect', category: 'Sleep', participants: 180, new: 36, returning: 144, completed: 105, completionRate: 58.33, avgDaysTagged: 4.2, avgDaysMissed: 0.6 },
-      { id: 522, name: '7 Day Yoga Challenge', category: 'Sleep', participants: 127, new: 18, returning: 109, completed: 57, completionRate: 44.88, avgDaysTagged: 3.4, avgDaysMissed: 0.8 },
-      { id: 521, name: 'The Dry Week Effect', category: 'Sleep', participants: 119, new: 17, returning: 102, completed: 70, completionRate: 58.82, avgDaysTagged: 4.4, avgDaysMissed: 0.4 },
-      { id: 498, name: 'The Fasting Reset', category: 'Sleep', participants: 115, new: 25, returning: 90, completed: 53, completionRate: 46.09, avgDaysTagged: 3.4, avgDaysMissed: 0.5 },
-      { id: 511, name: 'The Gratitude Effect', category: 'Sleep', participants: 110, new: 22, returning: 88, completed: 64, completionRate: 58.18, avgDaysTagged: 4.3, avgDaysMissed: 0.4 },
-      { id: 514, name: 'The 10K Steps Challenge', category: 'Recovery', participants: 110, new: 14, returning: 96, completed: 58, completionRate: 52.73, avgDaysTagged: 4.1, avgDaysMissed: 0.8 },
-      { id: 527, name: 'The Reading Ritual', category: 'Sleep', participants: 102, new: 12, returning: 90, completed: 60, completionRate: 58.82, avgDaysTagged: 4.2, avgDaysMissed: 0.6 },
-      { id: 526, name: 'The Hydration Effect', category: 'Recovery', participants: 98, new: 15, returning: 83, completed: 62, completionRate: 63.27, avgDaysTagged: 4.7, avgDaysMissed: 0.6 },
-      { id: 512, name: 'The 30-Minute Reset', category: 'Stress', participants: 97, new: 25, returning: 72, completed: 53, completionRate: 54.64, avgDaysTagged: 4.1, avgDaysMissed: 0.7 },
-      { id: 531, name: 'The Sunrise Effect', category: 'Sleep', participants: 97, new: 10, returning: 87, completed: 63, completionRate: 64.95, avgDaysTagged: 4.8, avgDaysMissed: 0.4 },
-      { id: 523, name: '7 Day Wim Hof Challenge', category: 'Stress', participants: 91, new: 13, returning: 78, completed: 41, completionRate: 45.05, avgDaysTagged: 3.5, avgDaysMissed: 0.7 },
-      { id: 529, name: 'The Nature Dose', category: 'Stress', participants: 75, new: 9, returning: 66, completed: 54, completionRate: 72.00, avgDaysTagged: 5.1, avgDaysMissed: 0.6 },
-      { id: 528, name: 'The Power Nap Challenge', category: 'Recovery', participants: 62, new: 6, returning: 56, completed: 34, completionRate: 54.84, avgDaysTagged: 3.9, avgDaysMissed: 0.7 },
-      { id: 475, name: 'Caffeine Effect', category: 'Sleep', participants: 59, new: 46, returning: 13, completed: 11, completionRate: 18.64, avgDaysTagged: 1.8, avgDaysMissed: 0.4 },
-      { id: 536, name: 'Seasonal Superfoods', category: 'Recovery', participants: 33, new: 2, returning: 31, completed: 28, completionRate: 84.85, avgDaysTagged: 6.0, avgDaysMissed: 0.2 },
-      { id: 535, name: 'The Box Breathing Effect', category: 'Stress', participants: 32, new: 1, returning: 31, completed: 24, completionRate: 75.00, avgDaysTagged: 5.5, avgDaysMissed: 0.5 },
-      { id: 534, name: 'The Cold Shower Effect', category: 'Recovery', participants: 30, new: 1, returning: 29, completed: 24, completionRate: 80.00, avgDaysTagged: 5.4, avgDaysMissed: 0.2 },
-      { id: 477, name: 'Caffeine Effect (W)', category: 'Sleep', participants: 14, new: 9, returning: 5, completed: 3, completionRate: 21.43, avgDaysTagged: 1.8, avgDaysMissed: 0.6 },
-      { id: 513, name: 'Track Your Travel', category: 'Sleep', participants: 13, new: 9, returning: 4, completed: 6, completionRate: 46.15, avgDaysTagged: 3.5, avgDaysMissed: 0.2 },
-      { id: 548, name: '14 Day Yoga Challenge', category: 'FitnessAndActivity', participants: 11, new: 0, returning: 11, completed: 0, completionRate: 0, avgDaysTagged: 2.2, avgDaysMissed: 0.3 },
-      { id: 547, name: '4-7-8 Effect (Extended)', category: 'Sleep', participants: 10, new: 1, returning: 9, completed: 0, completionRate: 0, avgDaysTagged: 2.9, avgDaysMissed: 0.7 },
-    ],
-  };
 
   const PS_CATEGORY_COLOR = { Sleep: '#6C5CE7', Recovery: '#00B39F', Stress: '#FB7185', FitnessAndActivity: '#C8E64A' };
   const PS_CAT_CLASS = { Sleep: 'ps-cat-sleep', Recovery: 'ps-cat-recovery', Stress: 'ps-cat-stress', FitnessAndActivity: 'ps-cat-fitness' };
@@ -4958,31 +4929,6 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       gender: psSortCountObj(gender), age: psSortAgeObj(age),
       geo: psSortCountObj(geo), geoLabel: 'Region',
       wearables: psSortCountObj(wearables),
-    };
-  }
-
-  // Fallback model from the embedded May-15 export (geo = ethnicity, no pace data).
-  function psNormalizeExport() {
-    const studies = PS_DATA.studies.map(s => ({
-      ...s, status: null, statusEffective: null,
-      launchDate: null, days: null, runRate30d: null, joinsByMonth: [], wearable: [],
-    }));
-    const completedRates = studies.filter(s => s.completionRate > 0).map(s => s.completionRate);
-    return {
-      source: 'export',
-      summary: {
-        totalStudies: studies.length,
-        studiesCompleted: completedRates.length,
-        totalParticipants: studies.reduce((a, s) => a + s.participants, 0),
-        newParticipants: studies.reduce((a, s) => a + s.new, 0),
-        returningParticipants: studies.reduce((a, s) => a + s.returning, 0),
-        avgCompletionRate: completedRates.length ? completedRates.reduce((a, b) => a + b, 0) / completedRates.length : 0,
-        runRate30d: null,
-      },
-      studies,
-      gender: psSortCountObj({ ...PS_DATA.gender }), age: psSortAgeObj({ ...PS_DATA.age }),
-      geo: psSortCountObj({ ...PS_DATA.ethnicity }), geoLabel: 'Ethnicity',
-      wearables: { ...PS_DATA.wearables },
     };
   }
 
@@ -5274,21 +5220,29 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     psCharts = {};
   }
 
-  function psRenderSourceBadge(model) {
+  function psRenderSourceBadge() {
     const badge = $('#ps-source-badge');
     const text = $('#ps-source-badge-text');
     const line = $('#ps-source-line');
     if (!badge || !line) return;
     badge.style.display = '';
-    if (model.source === 'live') {
-      badge.className = 'status-badge live';
-      if (text) text.textContent = 'Live';
-      line.innerHTML = 'Source: live operations API · <code style="color:var(--text-secondary);">GET /api/public-studies</code> · refreshes on each visit';
-    } else {
-      badge.className = 'status-badge cached';
-      if (text) text.textContent = 'Cached';
-      line.textContent = 'Source: embedded May 15, 2026 export — live feed unavailable, showing the cached snapshot.';
-    }
+    badge.className = 'status-badge live';
+    if (text) text.textContent = 'Live';
+    line.innerHTML = 'Source: live operations API · <code style="color:var(--text-secondary);">GET /api/public-studies</code> · refreshes on each visit';
+  }
+
+  // Live feed down: show an explicit unavailable state — never a stale or
+  // estimated snapshot. Nothing here is hardcoded; if the feed is gone, we say so.
+  function psRenderUnavailable(msg) {
+    psDestroyCharts();
+    const badge = $('#ps-source-badge'), line = $('#ps-source-line');
+    if (badge) badge.style.display = 'none';
+    if (line) line.innerHTML = 'Live public-studies feed unavailable' + (msg ? ' (' + esc(String(msg)) + ')' : '') +
+      ' — no cached snapshot is shown. This tab is 100% live; we don&rsquo;t display stale or estimated demographics. Reload once the feed is back.';
+    const grid = $('#ps-kpi-grid');
+    if (grid) grid.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:8px 0;grid-column:1/-1;">Unavailable — the live feed is down. Nothing is shown here rather than a stale snapshot.</div>';
+    const jr = $('#ps-joinrate-content'); if (jr) jr.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:8px 0;">Unavailable — live feed down.</div>';
+    const tb = $('#ps-detail-tbody'); if (tb) tb.innerHTML = '<tr><td colspan="10" style="color:var(--text-dim);padding:12px;">Unavailable — live feed down.</td></tr>';
   }
 
   async function psRenderAll() {
@@ -5301,8 +5255,11 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         model = psNormalizeLive(api);
         if (!model.studies.length) throw new Error('Live feed returned no studies');
       } catch (err) {
-        console.warn('Public Studies feed unavailable, using embedded May-15 export:', err.message);
-        model = psNormalizeExport();
+        // 100% live — never fall back to a stale/estimated snapshot. Show an
+        // honest "unavailable" state instead of hardcoded demographic numbers.
+        console.warn('Public Studies feed unavailable:', err.message);
+        psRenderUnavailable(err.message);
+        return;
       }
       psModel = model;
       // 7-day joins from a dedicated recruiting window (independent of the main dashboard's
@@ -5321,7 +5278,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         psJoins7d = map;
       } catch (e) { psJoins7d = {}; }
       psDestroyCharts();
-      psRenderSourceBadge(model);
+      psRenderSourceBadge();
       psRenderKPIs();
       psRenderJoinRate();
       psRenderCompletionChart();
