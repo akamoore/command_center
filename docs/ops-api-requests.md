@@ -221,6 +221,16 @@ recent activity, but the dashboard can't tell they're retired, so we're
 **hard-coding them hidden** for now. Please expose catalog state — e.g.
 `status: "retired"` or `catalogActive: false` — so we can drop the manual hide-list.
 
+**Update (Jul 2026):** the dashboard now runs every status decision through one
+canonical `catalogStatus()` resolver (single source of truth) that feeds the study
+list's new **Status** column plus the health score, watch list, and run-rate views.
+It reads a per-study lifecycle status — `live` / `complete` / `retired` (or
+`catalogActive: false`) / `coming_soon` — **from the API where present**, falls back
+to the curated off-catalog list, and otherwise labels the study **`Unknown`** rather
+than guessing it live. So the highest-value fix here is a reliable per-study
+**catalog status** on both `/api/recruiting` and `/api/public-studies`: it makes the
+Status column fully automatic and lets us delete the hand-maintained hide-list.
+
 ## 10. Public studies shouldn't carry **end dates**
 
 Evergreen public / community challenges are open-ended, but some come back with an
