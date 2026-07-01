@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Q3 Public Study Plan · Reputable Health</title>
+<title>Q3 Recruiting Plan · Wearable-first · Reputable Health</title>
 <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
   :root{
     --bg-body:#0a0a0a; --bg-surface:#1a1a1a; --bg-raised:#141414;
     --lime:#C8E64A; --lime-light:#D9FF85; --charcoal:#222220;
-    --text:#ffffff; --text-muted:#999999; --text-secondary:#a0a0a0;
+    --text:#ffffff; --text-muted:#999999; --text-secondary:#a0a0a0; --text-dim:#777777;
     --border:rgba(255,255,255,0.08);
   }
   *{box-sizing:border-box;}
@@ -42,26 +41,42 @@
   .badge{display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase;
     color:var(--lime); background:rgba(200,230,74,0.1); border:1px solid rgba(200,230,74,0.3); padding:5px 13px; border-radius:100px;}
   .hero h1{font-size:clamp(2rem,5vw,3rem); color:var(--text); line-height:1.1; margin:14px 0 10px; font-weight:700;}
-  .hero .tag{font-size:15px; color:var(--text-secondary); max-width:700px;}
-  /* stat cards */
-  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin:26px 0 6px;}
-  .stat-card{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:16px; padding:20px;}
-  .stat-num{font-size:2rem; font-weight:700; color:var(--lime); line-height:1;}
-  .stat-label{font-size:11px; color:var(--text-muted); margin-top:7px; text-transform:uppercase; letter-spacing:0.07em;}
-  /* charts */
-  .section-label{font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-muted); margin:40px 0 4px;}
-  .charts-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin:14px 0 8px;}
-  .chart-card{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:16px; padding:18px;}
-  .chart-card h3{margin:0 0 2px; font-size:14px; color:var(--text); font-weight:600;}
-  .chart-card .sub{font-size:11px; color:var(--text-muted); margin-bottom:14px;}
-  .chart-wrap{position:relative; height:270px;}
-  .chart-card.wide{grid-column:1 / -1;}
+  .hero .tag{font-size:15px; color:var(--text-secondary); max-width:760px;}
+  .hero .tag code{background:var(--bg-surface); color:var(--lime-light); padding:1px 6px; border-radius:5px; font-size:13px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  /* ── live-computed sections ── */
+  .live-sec{margin:40px 0 0;}
+  .live-sec > h2{font-size:1.35rem; color:var(--text); font-weight:600; margin:0 0 5px; padding-top:24px; border-top:1px solid var(--border);}
+  .live-sec > h2 .sub{color:var(--text-dim); font-weight:400; font-size:0.72em;}
+  .live-sec > .lead{font-size:13px; color:var(--text-muted); margin:0 0 16px; line-height:1.6; max-width:820px;}
+  .live-sec .lead code{background:var(--bg-surface); color:var(--lime-light); padding:1px 6px; border-radius:5px; font-size:12px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  .card{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:16px; padding:20px 22px;}
+  table.lt{width:100%; border-collapse:collapse; font-size:13px;}
+  table.lt th{text-align:left; color:var(--lime); font-size:10.5px; text-transform:uppercase; letter-spacing:0.07em; font-weight:700; padding:9px 12px; border-bottom:1px solid var(--border); white-space:nowrap;}
+  table.lt td{padding:9px 12px; border-bottom:1px solid var(--border); color:var(--text-secondary); vertical-align:middle;}
+  table.lt td.num{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  table.lt th.num{text-align:right;}
+  table.lt tbody tr:last-child td{border-bottom:none;}
+  table.lt tr:hover td{background:rgba(255,255,255,0.02);}
+  .pill{display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:0.03em; padding:2px 9px; border-radius:100px; white-space:nowrap;}
+  .pill.ok{background:rgba(52,211,153,0.14); color:#34D399; border:1px solid rgba(52,211,153,0.3);}
+  .pill.no{background:rgba(251,113,133,0.14); color:#FB7185; border:1px solid rgba(251,113,133,0.3);}
+  .pill.warn{background:rgba(251,191,36,0.14); color:#FBBF24; border:1px solid rgba(251,191,36,0.3);}
+  .pill.maintain{background:rgba(116,185,255,0.14); color:#74B9FF; border:1px solid rgba(116,185,255,0.3);}
+  .unavail{color:#FBBF24; font-style:italic;}
+  .math{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px; color:var(--text-secondary);}
+  .dimhead{font-size:10px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); margin:0 0 5px;}
+  .tog{display:inline-flex; border:1px solid rgba(200,230,74,0.4); border-radius:100px; overflow:hidden;}
+  .tog button{background:transparent; color:var(--text-secondary); border:none; padding:7px 15px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;}
+  .tog button.on{background:var(--lime); color:var(--charcoal);}
+  .tog button:not(.on):hover{background:rgba(200,230,74,0.08);}
+  .callout{border:1px solid rgba(200,230,74,0.3); background:linear-gradient(135deg,rgba(200,230,74,0.06),rgba(255,255,255,0.02)); border-radius:14px; padding:16px 18px; margin:6px 0 0;}
+  .section-label{font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-muted); margin:44px 0 4px;}
   /* section nav */
-  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:36px 0 4px; padding:16px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 4px; padding:16px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
   .toc-link{font-size:12px; color:var(--text-secondary); text-decoration:none; border:1px solid var(--border); padding:6px 13px; border-radius:100px; transition:all .2s ease; white-space:nowrap;}
   .toc-link:hover{border-color:var(--lime); color:var(--lime); background:rgba(200,230,74,0.06);}
   /* rendered markdown */
-  #doc{margin-top:26px;}
+  #doc{margin-top:20px;}
   #doc h1{display:none;}
   #doc h2{font-size:1.4rem; color:var(--text); margin:42px 0 14px; padding-top:22px; border-top:1px solid var(--border); font-weight:600; scroll-margin-top:20px;}
   #doc h3{font-size:1.08rem; color:var(--lime-light); margin:26px 0 8px; font-weight:600;}
@@ -103,80 +118,306 @@
   </div>
 
   <div class="hero">
-    <span class="badge">Public Study Plan · Q3 · Wearable-first</span>
+    <span class="badge">Q3 Recruiting Plan · Wearable-first</span>
     <h1>One factor: the wearable</h1>
-    <p class="tag">The Q3 plan, simplified to per-wearable headcount targets. Demographics fall out of each wearable's own mix — projected, not targeted. Current counts are the live July 1, 2026 wearable cross-tab.</p>
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-num">449 &rarr; 1,000</div><div class="stat-label">WHOOP (Q3 target)</div></div>
-      <div class="stat-card"><div class="stat-num">114 &rarr; 500</div><div class="stat-label">Apple Watch · 1,000 stretch</div></div>
-      <div class="stat-card"><div class="stat-num">$2,250</div><div class="stat-label">Ad budget (Q3)</div></div>
-      <div class="stat-card"><div class="stat-num">&ge;500</div><div class="stat-label">Floor per supported wearable (~10%)</div></div>
-    </div>
+    <p class="tag">The only numbers anyone is held to are <strong style="color:var(--text);">per-wearable headcounts</strong>. Demographics fall out of each wearable&rsquo;s own mix &mdash; projected, not targeted. <strong style="color:var(--text);">Every current count and percentage below is computed live at page load</strong> from <code>/api/demographics</code>; nothing is hard-coded except the targets themselves.</p>
   </div>
 
-  <div class="section-label">At a glance</div>
-  <div class="charts-grid">
-    <div class="chart-card">
-      <h3>Wearable headcount — current vs Q3 target</h3>
-      <div class="sub">The only numbers anyone is held to · Apple Watch stretch = 1,000</div>
-      <div class="chart-wrap"><canvas id="chart-targets"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <h3>Ad budget by wearable build</h3>
-      <div class="sub">$2,250 total · organic carries the targets, paid tops up</div>
-      <div class="chart-wrap"><canvas id="chart-budget"></canvas></div>
-    </div>
-  </div>
+  <div id="live"><p class="status">Computing live from the corrected study data&hellip;</p></div>
 
+  <div class="section-label">The full written plan</div>
+  <p style="font-size:13px;color:var(--text-muted);margin:0 0 2px;max-width:820px;">Narrative detail &mdash; study specs, rotation calendar, budget. <strong style="color:var(--text-secondary);">The live numbers above supersede any counts written here</strong> (this doc is a dated snapshot).</p>
   <nav class="toc" id="toc"></nav>
-
-  <div id="doc"><p class="status">Loading the full plan&hellip;</p></div>
+  <div id="doc"><p class="status">Loading the written plan&hellip;</p></div>
 </div>
 
 <script>
-  // ── Charts (curated summary; full detail renders below) — WEARABLE-FIRST ──
-  // Current counts are the live Jul 1 2026 wearable cross-tab; targets are the held-to numbers.
-  var WEARABLES = ['WHOOP','Apple Watch'];
-  var CURRENT = { 'WHOOP':449, 'Apple Watch':114 };
-  var TARGET  = { 'WHOOP':1000, 'Apple Watch':500 };   // Apple Watch stretch = 1,000
-  var WCOLOR  = { 'WHOOP':'#6C5CE7', 'Apple Watch':'#C8E64A' };
-  var BUDGET = { labels:['WHOOP → 1,000','Apple Watch → 500','Fitbit / Garmin ride-along'],
-    data:[1050,800,400], colors:['#6C5CE7','#C8E64A','#34D399'] };
+  // ════════════════════════════════════════════════════════════════════════
+  //  LIVE Q3 WEARABLE PLAN
+  //  Every current count and every percentage is fetched at load from
+  //  /api/demographics (same-origin proxy adds the key). NOTHING is hard-coded
+  //  except the TARGETS — those are goals, not counts. Any value the live feed
+  //  can't supply is labelled "unavailable, needs verification", never
+  //  estimated, smoothed, or filled with a placeholder.
+  // ════════════════════════════════════════════════════════════════════════
+  (function () {
+    var $live = document.getElementById('live');
 
-  try {
-    if (typeof Chart !== 'undefined') {
-      Chart.defaults.color = '#9aa0a6';
-      Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
-      Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      var gridc = 'rgba(255,255,255,0.06)';
+    // Targets are GOALS — safe to hard-code. Counts are NEVER hard-coded.
+    var TARGETS = [
+      { key:'whoop',  label:'WHOOP',       slugs:['whoop_v2','whoop'],               target:1000, stretch:null },
+      { key:'apple',  label:'Apple Watch', slugs:['apple_health_kit','apple_watch'], target:500,  stretch:1000 },
+      { key:'oura',   label:'Oura',        slugs:['oura'],                           target:null, stretch:null, maintain:true },
+      { key:'fitbit', label:'Fitbit',      slugs:['fitbit'],                         target:null, stretch:null, onlyIfPresent:true },
+    ];
+    // Prior working figures from the plan snapshot — shown ONLY to flag drift
+    // against the live feed ("flag the differences for me"). NOT used as truth.
+    var PRIOR = { whoop:449, apple:114, oura:4480, fitbit:57, garmin:42 };
+    var LABEL = { oura:'Oura', whoop_v2:'WHOOP', whoop:'WHOOP', fitbit:'Fitbit', garmin:'Garmin', apple_health_kit:'Apple Watch', apple_watch:'Apple Watch' };
+    var MIN_N = 30;        // below this: "too small to break down reliably" — raw count, no %
+    var FLOOR_ABS = 500;   // absolute-floor option
+    var FLOOR_PCT = 0.10;  // 10%-of-ecosystem floor option
+    var governRule = 'either';   // 'abs' | 'pct' | 'either' (still being decided)
 
-      // 1) Wearable headcount — current (live) vs Q3 target, grouped horizontal bar
-      new Chart(document.getElementById('chart-targets'), {
-        type:'bar',
-        data:{ labels:WEARABLES, datasets:[
-          { label:'Current (live)', data:WEARABLES.map(function(w){return CURRENT[w];}),
-            backgroundColor:'rgba(255,255,255,0.16)', borderRadius:5, barThickness:16 },
-          { label:'Q3 target', data:WEARABLES.map(function(w){return TARGET[w];}),
-            backgroundColor:WEARABLES.map(function(w){return WCOLOR[w];}), borderRadius:5, barThickness:16 }
-        ] },
-        options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{position:'top', labels:{boxWidth:12, boxHeight:12, padding:12, font:{size:12}}},
-            tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.parsed.x.toLocaleString();}}} },
-          scales:{ x:{beginAtZero:true, grid:{color:gridc}, ticks:{precision:0}}, y:{grid:{display:false}, ticks:{font:{size:13}}} } }
-      });
+    // state, populated after the live fetch
+    var mix = null;        // { slug: { total, gender:{}, age:{}, ethnicity:{} } } — real joint counts
+    var ecoTotal = 0;      // sum of participations across ALL wearables (incl. Unknown)
+    var unknownTotal = 0;  // participations with no wearable recorded
 
-      // 2) Budget by wearable build (donut)
-      new Chart(document.getElementById('chart-budget'), {
-        type:'doughnut',
-        data:{ labels:BUDGET.labels, datasets:[{ data:BUDGET.data, backgroundColor:BUDGET.colors, borderColor:'#0a0a0a', borderWidth:3 }] },
-        options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
-          plugins:{ legend:{position:'bottom', labels:{boxWidth:10, boxHeight:10, padding:10, font:{size:11}}},
-            tooltip:{callbacks:{label:function(ctx){return ctx.label+': $'+ctx.parsed.toLocaleString();}}} } }
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); };
+    var fmt = function (n) { return (Number(n) || 0).toLocaleString(); };
+    var unavail = function () { return '<span class="unavail">unavailable, needs verification</span>'; };
+
+    function fetchDemo(qs) {
+      return fetch('/api/demographics' + qs, { cache: 'no-cache' }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
       });
     }
-  } catch (e) { /* charts are a bonus — fail silently, detail still renders below */ }
+    // Parse a wearable×dim cross-tab into acc[slug][dim][bucket] = count. Joint
+    // cells only — we never derive from single-dimension marginals (that fabricates).
+    function parseCross(resp, dim, acc) {
+      var cells = (resp && resp.crossTab && resp.crossTab.cells) || [];
+      cells.forEach(function (c) {
+        var w = c && c.keys && c.keys.wearable;
+        var b = c && c.keys && c.keys[dim];
+        if (w == null || b == null) return;
+        var rec = (acc[w] = acc[w] || { total:0, gender:{}, age:{}, ethnicity:{} });
+        rec[dim][b] = (rec[dim][b] || 0) + (Number(c.count) || 0);
+      });
+    }
+    function slugsPresent(t) { return t.slugs.filter(function (s) { return mix[s]; }); }
+    // current live count for a target = sum over whichever candidate slugs exist; null if none
+    function currentFor(t) {
+      var have = slugsPresent(t);
+      if (!have.length) return null;
+      return have.reduce(function (a, s) { return a + (mix[s].total || 0); }, 0);
+    }
+    // merged internal distribution across a target's slugs, for one dimension
+    function distFor(t, dim) {
+      var out = {};
+      t.slugs.forEach(function (s) {
+        var d = mix[s] && mix[s][dim];
+        if (d) for (var k in d) out[k] = (out[k] || 0) + d[k];
+      });
+      return out;
+    }
 
-  // ── Full plan (rendered from the markdown source of truth) ──
+    // ── Section: reconcile live vs. the plan's working figures ──────────────
+    function secReconcile() {
+      var rows = TARGETS.concat([{ key:'garmin', label:'Garmin', slugs:['garmin'] }]).map(function (t) {
+        var cur = slugsPresent(t).length ? currentFor(t) : null;
+        var prior = PRIOR[t.key];
+        if (cur == null && prior == null) return null;
+        return { label: t.label, prior: (prior == null ? null : prior), live: cur };
+      }).filter(Boolean);
+
+      var anyDrift = rows.some(function (r) {
+        return r.live != null && r.prior != null && Math.abs(r.live - r.prior) >= Math.max(15, r.prior * 0.1);
+      });
+      var body = rows.map(function (r) {
+        var priorCell = r.prior == null ? '&mdash;' : fmt(r.prior);
+        var liveCell = r.live == null ? unavail() : fmt(r.live);
+        var delta = '&mdash;';
+        if (r.live != null && r.prior != null) {
+          var d = r.live - r.prior;
+          var big = Math.abs(d) >= Math.max(15, r.prior * 0.1);
+          delta = '<span style="color:' + (d === 0 ? 'var(--text-dim)' : big ? '#FB7185' : 'var(--text-secondary)') + ';font-weight:' + (big ? '700' : '400') + ';">' + (d > 0 ? '+' : '') + fmt(d) + (big ? ' &#9888;' : '') + '</span>';
+        }
+        return '<tr><td><strong style="color:var(--text);">' + esc(r.label) + '</strong></td><td class="num" style="color:var(--text-dim);">' + priorCell + '</td><td class="num">' + liveCell + '</td><td class="num">' + delta + '</td></tr>';
+      }).join('');
+
+      return '<div class="callout">'
+        + '<div style="font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--lime);margin-bottom:6px;">Live vs. the plan&rsquo;s working figures</div>'
+        + '<div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:12px;line-height:1.55;">You flagged the old feed as possibly wrong, so here&rsquo;s each live count next to the figure written into the plan snapshot. <strong style="color:var(--text);">The live column governs.</strong> '
+        + (anyDrift ? '<span style="color:#FB7185;">Some counts drifted &mdash; flagged with &#9888; below.</span>' : 'No material drift &mdash; the live feed matches the plan snapshot.') + '</div>'
+        + '<table class="lt"><thead><tr><th>Wearable</th><th class="num">Plan snapshot (prior)</th><th class="num">Live now</th><th class="num">&Delta;</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+    }
+
+    // ── Section 1: primary targets, per wearable ────────────────────────────
+    function secTargets() {
+      var rows = TARGETS.map(function (t) {
+        var present = slugsPresent(t).length > 0;
+        if (t.onlyIfPresent && !present) return null;   // omit Fitbit if no live users
+        var cur = present ? currentFor(t) : null;
+        var curCell = cur == null ? unavail() : fmt(cur);
+        var tgtCell, netCell, strCell, note = '';
+
+        if (t.maintain) {
+          tgtCell = '<span class="pill maintain">maintain</span>';
+          netCell = '&mdash;';
+          strCell = '&mdash;';
+          note = 'Largest pool &mdash; at/above threshold, maintain';
+        } else if (t.target) {
+          tgtCell = '<strong style="color:var(--text);">' + fmt(t.target) + '</strong>';
+          if (cur == null) {
+            netCell = unavail();
+          } else {
+            var net = t.target - cur;
+            netCell = '<span class="math">' + fmt(t.target) + ' &minus; ' + fmt(cur) + ' = <strong style="color:var(--lime);font-size:12px;">' + (net > 0 ? '+' : '') + fmt(net) + '</strong></span>'
+              + (net <= 0 ? ' <span class="pill ok">target met</span>' : '');
+          }
+          strCell = t.stretch
+            ? (fmt(t.stretch) + (cur == null ? '' : ' <span class="math" style="color:var(--text-dim);">(+' + fmt(Math.max(0, t.stretch - cur)) + ')</span>'))
+            : '&mdash;';
+        } else {
+          tgtCell = '&mdash;'; netCell = '&mdash;'; strCell = '&mdash;';
+        }
+        return '<tr><td><strong style="color:var(--text);">' + esc(t.label) + '</strong>'
+          + (note ? '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">' + note + '</div>' : '')
+          + '</td><td class="num">' + curCell + '</td><td class="num">' + tgtCell + '</td><td>' + netCell + '</td><td class="num">' + strCell + '</td></tr>';
+      }).filter(Boolean).join('');
+
+      var fitbitPresent = !!mix['fitbit'];
+      var foot = fitbitPresent ? '' :
+        '<div style="font-size:12px;color:var(--text-dim);margin-top:10px;">No Fitbit users in the live feed, so Fitbit is omitted here (per the plan: include a Fitbit row only if there are Fitbit users).</div>';
+
+      return '<div class="live-sec"><h2>1 &middot; Primary targets <span class="sub">&mdash; per wearable, the only held-to numbers</span></h2>'
+        + '<p class="lead">Current counts are pulled live from the wearable cross-tab. <strong style="color:var(--text-secondary);">Net new needed</strong> is computed as <span class="math" style="color:var(--text-secondary);">target &minus; live current</span> &mdash; shown, not stored. Counts are <em>participations</em> (study-participant pairs), the same basis as the dashboard&rsquo;s Wearable-first mix view.</p>'
+        + '<div class="card"><table class="lt"><thead><tr><th>Wearable</th><th class="num">Current (live)</th><th class="num">Q3 target</th><th>Net new needed</th><th class="num">Stretch target</th></tr></thead><tbody>' + rows + '</tbody></table>' + foot + '</div></div>';
+    }
+
+    // ── Section 2: minimum threshold check ──────────────────────────────────
+    function secThreshold() {
+      var tenPct = Math.round(ecoTotal * FLOOR_PCT);
+      var slugs = Object.keys(mix).filter(function (s) { return s && String(s).toLowerCase() !== 'unknown'; })
+        .sort(function (a, b) { return (mix[b].total || 0) - (mix[a].total || 0); });
+
+      var rows = slugs.map(function (s) {
+        var n = mix[s].total || 0;
+        var okAbs = n >= FLOOR_ABS;
+        var okPct = n >= tenPct;
+        var governed = governRule === 'abs' ? okAbs : governRule === 'pct' ? okPct : (okAbs || okPct);
+        var verdict = governed ? '<span class="pill ok">clears floor</span>' : '<span class="pill no">below floor</span>';
+        return '<tr><td><strong style="color:var(--text);">' + esc(LABEL[s] || s) + '</strong></td>'
+          + '<td class="num">' + fmt(n) + '</td>'
+          + '<td class="num">' + (okAbs ? '<span class="pill ok">&ge; 500</span>' : '<span class="pill no">&lt; 500</span>') + '</td>'
+          + '<td class="num">' + (okPct ? '<span class="pill ok">&ge; ' + fmt(tenPct) + '</span>' : '<span class="pill no">&lt; ' + fmt(tenPct) + '</span>') + '</td>'
+          + '<td class="num">' + verdict + '</td></tr>';
+      }).join('');
+
+      var ruleNote = governRule === 'either'
+        ? 'Governing rule is <strong style="color:var(--text-secondary);">still being decided</strong> &mdash; a wearable shows as clearing if it meets <em>either</em> test. Pick <strong>500</strong> or <strong>10%</strong> to see the stricter single-rule verdict.'
+        : governRule === 'abs'
+        ? 'Governing rule set to the <strong style="color:var(--lime);">absolute 500</strong> floor.'
+        : 'Governing rule set to <strong style="color:var(--lime);">10% of the ecosystem</strong> (' + fmt(tenPct) + ').';
+
+      return '<div class="live-sec"><h2>2 &middot; Minimum threshold check</h2>'
+        + '<p class="lead">A supported wearable should reach <strong style="color:var(--text-secondary);">&ge; ~500 people</strong> <em>or</em> <strong style="color:var(--text-secondary);">~10% of the total ecosystem</strong>, whichever we decide governs. Total ecosystem (live) = <strong style="color:var(--lime);">' + fmt(ecoTotal) + '</strong> participations across all wearables'
+        + (unknownTotal ? ' (incl. ' + fmt(unknownTotal) + ' with no wearable recorded)' : '') + '; 10% = <strong style="color:var(--lime);">' + fmt(tenPct) + '</strong>.</p>'
+        + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">'
+        + '<span style="font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);">Governing rule</span>'
+        + '<span class="tog"><button data-rule="abs" class="' + (governRule === 'abs' ? 'on' : '') + '">500</button>'
+        + '<button data-rule="pct" class="' + (governRule === 'pct' ? 'on' : '') + '">10%</button>'
+        + '<button data-rule="either" class="' + (governRule === 'either' ? 'on' : '') + '">either (TBD)</button></span></div>'
+        + '<div class="card"><table class="lt"><thead><tr><th>Wearable</th><th class="num">Current (live)</th><th class="num">&ge; 500?</th><th class="num">&ge; 10% (' + fmt(tenPct) + ')?</th><th class="num">Governing verdict</th></tr></thead><tbody>' + rows + '</tbody></table>'
+        + '<div style="font-size:12px;color:var(--text-dim);margin-top:10px;">' + ruleNote + '</div></div></div>';
+    }
+
+    // ── Section 3: derived demographic projections ──────────────────────────
+    function secProjections() {
+      var DIMS = [['gender', 'Gender'], ['age', 'Age'], ['ethnicity', 'Ethnicity']];
+      var contributors = TARGETS.filter(function (t) { return t.target && slugsPresent(t).length; }).map(function (t) {
+        var cur = currentFor(t);
+        return { t: t, cur: cur, net: (cur == null ? null : Math.max(0, t.target - cur)),
+          total: t.slugs.reduce(function (a, s) { return a + ((mix[s] && mix[s].total) || 0); }, 0) };
+      });
+
+      var aggregate = { gender:{}, age:{}, ethnicity:{} };
+      var blocks = contributors.map(function (c) {
+        var t = c.t, head = '<h3 style="margin:0 0 4px;color:var(--lime-light);font-size:1rem;">' + esc(t.label) + '</h3>';
+        if (c.cur == null) return '<div class="card" style="margin-bottom:14px;">' + head + '<div>' + unavail() + ' &mdash; no live count, so nothing to project.</div></div>';
+        if (c.net === 0) return '<div class="card" style="margin-bottom:14px;">' + head + '<div style="color:var(--text-dim);font-size:13px;">Already at/above target (' + fmt(c.cur) + ' &ge; ' + fmt(t.target) + ') &mdash; no net-new to project.</div></div>';
+        if (c.total < MIN_N) {
+          return '<div class="card" style="margin-bottom:14px;">' + head
+            + '<span class="pill warn">' + fmt(c.total) + ' users &mdash; too few to break down reliably</span>'
+            + '<div style="font-size:12px;color:var(--text-dim);margin-top:8px;">Showing the raw count instead of a misleading % split: <strong style="color:var(--lime);">+' + fmt(c.net) + '</strong> net-new people to ' + esc(t.label) + '.</div></div>';
+        }
+        var dimHtml = DIMS.map(function (d) {
+          var dim = d[0], name = d[1], dist = distFor(t, dim);
+          var entries = Object.keys(dist).map(function (k) { return [k, Number(dist[k]) || 0]; })
+            .sort(function (a, b) { return (a[0] === 'Unknown' ? 1 : b[0] === 'Unknown' ? -1 : b[1] - a[1]); });
+          var dtot = entries.reduce(function (a, e) { return a + e[1]; }, 0);
+          if (!dtot) return '<div><div class="dimhead">' + name + '</div><div style="font-size:12px;">' + unavail() + '</div></div>';
+          var rws = entries.map(function (e) {
+            var b = e[0], n = e[1], pct = n / dtot, add = Math.round(c.net * pct);
+            aggregate[dim][b] = (aggregate[dim][b] || 0) + add;
+            return '<tr><td>' + esc(b) + '</td><td class="num">' + (pct * 100).toFixed(0) + '%</td>'
+              + '<td class="num math">' + fmt(c.net) + ' &times; ' + (pct * 100).toFixed(0) + '% = <strong style="color:var(--lime);">+' + fmt(add) + '</strong></td></tr>';
+          }).join('');
+          return '<div><div class="dimhead">' + name + '</div><table class="lt" style="font-size:11.5px;"><thead><tr><th>' + name + '</th><th class="num">Mix</th><th class="num">Net-new projected</th></tr></thead><tbody>' + rws + '</tbody></table></div>';
+        }).join('');
+
+        return '<div class="card" style="margin-bottom:14px;">'
+          + '<h3 style="margin:0 0 10px;color:var(--lime-light);font-size:1rem;">' + esc(t.label)
+          + ' <span style="color:var(--text-dim);font-weight:400;font-size:0.85em;">' + fmt(c.total) + ' users &middot; net new +' + fmt(c.net) + '</span></h3>'
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:16px;">' + dimHtml + '</div></div>';
+      }).join('');
+
+      var aggHtml = DIMS.map(function (d) {
+        var dim = d[0], name = d[1];
+        var entries = Object.keys(aggregate[dim]).map(function (k) { return [k, aggregate[dim][k]]; })
+          .sort(function (a, b) { return (a[0] === 'Unknown' ? 1 : b[0] === 'Unknown' ? -1 : b[1] - a[1]); });
+        if (!entries.length) return '';
+        var rws = entries.map(function (e) {
+          return '<tr><td>' + esc(e[0]) + '</td><td class="num" style="color:var(--lime);font-weight:600;">+' + fmt(e[1]) + '</td></tr>';
+        }).join('');
+        return '<div><div class="dimhead">' + name + '</div><table class="lt" style="font-size:11.5px;"><thead><tr><th>' + name + '</th><th class="num">Net-new, all wearables</th></tr></thead><tbody>' + rws + '</tbody></table></div>';
+      }).filter(Boolean).join('');
+
+      var aggBlock = aggHtml
+        ? '<div class="card" style="margin-top:6px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--lime);margin-bottom:12px;">Projected ecosystem shift by end of Q3 &mdash; net-new people, aggregated across wearables</div>'
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:16px;">' + aggHtml + '</div>'
+          + '<div style="font-size:11.5px;color:var(--text-dim);margin-top:12px;line-height:1.55;">These are <strong style="color:var(--text-secondary);">projected outcomes</strong> if each wearable&rsquo;s current internal percentages hold &mdash; not targets. Buckets shared across wearables (e.g. male) are summed.</div></div>'
+        : '';
+
+      return '<div class="live-sec"><h2>3 &middot; Projected outcomes <span class="sub">&mdash; assuming current wearable %s hold, not targets anyone is held to</span></h2>'
+        + '<p class="lead">For each wearable&rsquo;s net-new number we apply <strong style="color:var(--text-secondary);">that wearable&rsquo;s own current internal mix</strong> (live, from <code>groupBy=wearable,&lt;dim&gt;</code>) to project net-new people by demographic &mdash; never smoothed. Projections use the <strong>base</strong> targets; Apple Watch&rsquo;s stretch (&rarr;1,000) scales its lines proportionally. A wearable under ' + MIN_N + ' users is shown as a raw count, not a %.</p>'
+        + (blocks || '<div class="card">No wearable has a positive net-new target from the live data, so there&rsquo;s nothing to project.</div>')
+        + aggBlock + '</div>';
+    }
+
+    function renderAll() {
+      $live.innerHTML = secReconcile() + secTargets() + secThreshold() + secProjections();
+      Array.prototype.forEach.call($live.querySelectorAll('.tog button'), function (btn) {
+        btn.addEventListener('click', function () { governRule = btn.getAttribute('data-rule'); renderAll(); });
+      });
+    }
+
+    // ── fetch the three wearable×demographic cross-tabs, then compute ────────
+    Promise.all([
+      fetchDemo('?groupBy=wearable,gender'),
+      fetchDemo('?groupBy=wearable,age'),
+      fetchDemo('?groupBy=wearable,ethnicity')
+    ]).then(function (res) {
+      var acc = {};
+      parseCross(res[0], 'gender', acc);
+      parseCross(res[1], 'age', acc);
+      parseCross(res[2], 'ethnicity', acc);
+      Object.keys(acc).forEach(function (s) {
+        var r = acc[s];
+        var sum = function (o) { return Object.keys(o).reduce(function (a, k) { return a + (Number(o[k]) || 0); }, 0); };
+        r.total = sum(r.gender) || sum(r.age) || sum(r.ethnicity);
+      });
+      mix = acc;
+      ecoTotal = Object.keys(mix).reduce(function (a, s) { return a + (mix[s].total || 0); }, 0);
+      unknownTotal = Object.keys(mix).filter(function (s) { return String(s).toLowerCase() === 'unknown'; })
+        .reduce(function (a, s) { return a + (mix[s].total || 0); }, 0);
+
+      var gotJoint = Object.keys(mix).some(function (s) { return Object.keys(mix[s].gender || {}).length > 0; });
+      if (!Object.keys(mix).length || !gotJoint) {
+        $live.innerHTML = '<div class="card"><div style="color:#FBBF24;font-weight:600;">The wearable &times; demographic cross-tab returned no joint cells.</div>'
+          + '<div style="font-size:13px;color:var(--text-dim);margin-top:8px;line-height:1.6;">This view needs multi-dimension <code style="color:var(--lime-light);">groupBy</code> (<code style="color:var(--lime-light);">/api/demographics?groupBy=wearable,&lt;dim&gt;</code>). I won&rsquo;t derive counts from single-dimension marginals &mdash; that would be fabricated. Everything here stays <em>unavailable, needs verification</em> until the cross-tab returns.</div></div>';
+        return;
+      }
+      renderAll();
+    }).catch(function (err) {
+      $live.innerHTML = '<div class="card"><div style="color:#FBBF24;font-weight:600;">Couldn&rsquo;t reach the live study data (' + esc(err.message) + ').</div>'
+        + '<div style="font-size:13px;color:var(--text-dim);margin-top:8px;line-height:1.6;">Every number on this page is computed live from <code style="color:var(--lime-light);">/api/demographics</code> &mdash; nothing is cached or hard-coded &mdash; so with the feed unreachable there&rsquo;s nothing to show. Reload once it&rsquo;s back; no estimates are substituted.</div></div>';
+    });
+  })();
+
+  // ── Full written plan (rendered from the markdown source of truth) ────────
   (async function () {
     var el = document.getElementById('doc');
     try {
@@ -189,8 +430,7 @@
         return;
       }
       el.innerHTML = marked.parse(md);
-      // Collapse each H2 section into an accordion so the page stays short —
-      // detail is one click away, charts above carry the at-a-glance.
+      // Collapse each H2 section into an accordion so the page stays short.
       var toc = document.getElementById('toc');
       var kids = Array.prototype.slice.call(el.childNodes);
       var secs = [], cur = null;
@@ -201,7 +441,6 @@
       secs.forEach(function (sec, i) {
         var details = document.createElement('details');
         details.className = 'sec'; details.id = 'sec-' + i;
-        if (i === 0) details.open = true; // first section open as an anchor
         var summary = document.createElement('summary');
         summary.innerHTML = sec.head.innerHTML;
         details.appendChild(summary);
@@ -220,7 +459,7 @@
         toc.appendChild(a);
       });
     } catch (e) {
-      el.innerHTML = '<p class="status">Couldn&rsquo;t load the plan here (' + e.message + '). ' +
+      el.innerHTML = '<p class="status">Couldn&rsquo;t load the written plan here (' + e.message + '). ' +
         'View it on <a style="color:var(--lime);" href="https://github.com/akamoore/command_center/blob/main/docs/public-study-q3-plan.md">GitHub</a> instead.</p>';
     }
   })();
