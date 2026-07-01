@@ -1196,9 +1196,22 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     'a coffee study',              // Enhanced Brew - A Coffee Study  (≠ real "Enhanced Brew — Coffee Study (Nov 2025)")
     'enhanced brew formula (ebf)', // Enhanced Brew Formula (EBF) RCT (≠ real "Enhanced Brew Formula — RCT (Jun 2025)")
   ];
+  // Test / internal / QA studies — identified by NAME markers because the API exposes no
+  // test/internal flag (see docs/ops-api-requests.md). Confirmed drop-list (Jul 2026):
+  // HOP Box (Internal), the Nuchido test studies, Whoop - March 12 Test, Labs test — plus
+  // Dropbox and generic sandbox/demo/qa for anything that shows up later. Verified against
+  // the full study list: catches only genuine test/internal studies, no real ones.
+  const TEST_INTERNAL_MARKERS = [
+    /\(internal\)/i, /\(test\b/i, /\btest\)/i, /\bnuchido\b/i, /\blabs test\b/i,
+    /\bmarch \d+ test\b/i, /\bdropbox\b/i, /\bsandbox\b/i, /\bdemo\b/i, /\bqa\b/i,
+  ];
+  const isTestInternalStudy = name => {
+    const s = String(name || '');
+    return TEST_INTERNAL_MARKERS.some(re => re.test(s));
+  };
   const isExcludedStudyName = name => {
     const n = (name || '').toLowerCase();
-    return EXCLUDED_NAMES.some(ex => n.includes(ex));
+    return EXCLUDED_NAMES.some(ex => n.includes(ex)) || isTestInternalStudy(name);
   };
 
   // ============================================================
@@ -4351,6 +4364,11 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     el.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Loading ecosystem demographics…</div>';
     try {
       ecoData = await dataService.fetchDemographics();
+      // Drop test/internal studies from the ecosystem list (confirmed name-marker filter),
+      // so the public scope, study selector, rollup, and gap cross-tab all exclude them.
+      if (ecoData && Array.isArray(ecoData.studies)) {
+        ecoData.studies = ecoData.studies.filter(s => !isExcludedStudyName(s && s.name));
+      }
     } catch (err) {
       el.innerHTML = `<div style="color:var(--text-dim);font-size:13px;">Ecosystem data unavailable — ${esc(err.message)}.</div>`;
       return;
