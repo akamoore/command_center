@@ -104,6 +104,40 @@ Each is one-factor, tagged by the **wearable** it builds (demographic effects ar
 
 ---
 
+## Study access policy — which wearables each study is open to
+
+**Not decided here — this scaffolds the decision.** For each active study we set whether it's
+**open to all wearables** or **gated to new-user acquisition** (opened only to the wearables
+we're actively trying to grow). Fill in the Access column per study.
+
+| Study | Access | Note |
+|---|---|---|
+| The Daily Steps Streak | `[DECISION NEEDED: Katie/Pankaj]` | Builds Apple Watch + Fitbit + Garmin (steps/movement). |
+| The Nature Dose | `[DECISION NEEDED: Katie/Pankaj]` | Builds Apple Watch. |
+| The Gratitude Effect | `[DECISION NEEDED: Katie/Pankaj]` | WHOOP + Garmin bridge — see WHOOP note below. |
+| Summer Shred | `[DECISION NEEDED: Katie/Pankaj]` | Weighted to WHOOP (launch plan). WHOOP is scarce — see note. |
+| World Cup | `[DECISION NEEDED: Katie/Pankaj]` | Weighted to Apple Watch (launch plan). |
+| Celsius / Game-Day Energy *(energy/sports, optional)* | `[DECISION NEEDED: Katie/Pankaj]` | Optional under the wearable-first model. |
+
+**This study list is not final** — reconcile it against the corrected live catalog (pending
+Manpreet): `[Mackenzie: verify]`.
+
+**Two things that shape the calls:**
+
+- **WHOOP is a scarce pool.** Avoid study designs that pull *existing* WHOOP participants into
+  long public studies — that can **disqualify them from WHOOP clinicals**, where WHOOP
+  participants are most valuable. Gate WHOOP toward genuinely new WHOOP users.
+- **Oura is the dominant pool** (**~4,500**, Jul-1 snapshot) and public **study-join volume is
+  low**, so **opening a study to Oura is low-risk** — little chance of depleting or
+  over-committing that population.
+
+**Open question:** should **Summer Shred** be opened to **Oura**? → `[DECISION NEEDED: Katie/Pankaj]`
+
+> The final access call for each study depends on the **corrected public-study counts**
+> (pending Manpreet). Treat this table as a scaffold; lock the Access column once those land.
+
+---
+
 ## 5. Q3 rotation calendar (wearable-first)
 
 ~2 studies/month at cap, weighted to the **Apple Watch** build (tractable) with the **WHOOP**
@@ -120,6 +154,33 @@ lever running in parallel via paid/partner.
 
 ---
 
+## Study portfolio rules — keep / kill / rotate
+
+How we decide what stays on the catalog, so keep/kill is a **policy, not a gut call.** This
+mirrors the canonical operating rules in `docs/public-study-catalog-rules.md` — keep that doc
+as the source of truth; this is the Q3-plan-scoped summary.
+
+- **Keep/kill signal (primary): recent join rate.** Judge a study on its **7-day and 30-day
+  join rate** plus the **trend — rising / flat / falling.** This **replaces the old
+  compliance-weighted "health score"** as the primary keep/kill lever. Interest = joins is the
+  one signal that retires a study.
+- **Compliance is secondary and separate.** Low compliance is a **study-design problem to fix**
+  (difficulty, onboarding, reminders, protocol friction) — **not** a reason to kill a study.
+  **Don't blend compliance into the keep/kill call.**
+- **Swap trigger.** When a study's **7-day and 30-day joins fall to ~1 person or fewer** with
+  **no recovery over ~2 weeks**, **flag it for removal.**
+- **Recycle cadence.** Review the catalog **~every 3 months** and swap out the failures —
+  **unless a study is still performing** (strong, sustained join rate), in which case it stays.
+  Don't retire a winner on a calendar.
+- **Concurrent live studies (target):** `[DECISION NEEDED: Katie/Pankaj]` — the live count was
+  stated at **~14 on Jun 30**; confirm the target against the corrected dashboard. Direction is
+  *fewer* (scarcity + newness); the exact number is set by the join-rate data, not guessed.
+
+> These rules assume the **public-study join / participant counts are corrected** (pending
+> Manpreet). Apply them once those numbers are verified.
+
+---
+
 ## 6. Budget — wearable-first (~$2,250 / quarter · $750 / month)
 
 Reallocated from the old demographic split to the wearable build. *Organic carries the
@@ -131,6 +192,26 @@ targets; paid is a top-up.* Per-line spend is **proposed — confirm with Pankaj
 | **Apple Watch → 500 (+stretch)** | **~$800** | Steps/movement studies are organic-led; paid tops up + funds the stretch. |
 | **Fitbit / Garmin ride-along** | **~$400** | Shared steps-study targeting; no dedicated push unless we fund to floor. |
 | Oura | **$0** | Already dominant. |
+
+---
+
+## Launch sequence — before we spend
+
+The order of operations before we commit paid budget.
+
+1. **Clean the list first.** Before any paid spend, **cleanse the email list** and set up
+   **segmented follow-up sequences**, so new interest is captured and nurtured, not lost.
+2. **Promote to the base we already have.** Push the **active public studies to the existing
+   base first** — **everyone with an email is on the newsletter**, so this is free reach before
+   we pay for more.
+3. **Test small, then scale.** Run a **one-month test at a small budget** before committing the
+   full quarterly spend. **Continue or pivot on the join-rate signal** — a **two-week read is
+   usually enough** to tell.
+4. **Targeting split (device-weighted, not device-locked):**
+   - **World Cup → weighted to Apple Watch.**
+   - **Summer Shred → weighted to WHOOP.**
+   - Keep studies **open to all wearables in-app** rather than hard-restricting by device — the
+     weighting is in *who we target*, not a lock on *who can join.*
 
 ---
 
