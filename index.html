@@ -5295,14 +5295,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const wd = r.wearables;
       let wearCell;
       if (wd && Object.keys(wd).length) {
-        const allw = Object.entries(wd);
-        const shown = allw.slice(0, 3);
-        const restN = allw.length - shown.length;
-        const fullw = allw.map(([k, v]) => `${k}: ${fmtInt(v)}`).join(' · ');
-        wearCell = `<span title="${esc(fullw)}" style="white-space:nowrap;">`
-          + shown.map(([k, v]) => `${esc(k)} <span style="color:var(--text-dim);">${fmtInt(v)}</span>`).join(' · ')
-          + (restN > 0 ? ` <span style="color:var(--text-dim);">+${restN}</span>` : '')
-          + `</span>`;
+        // Show every device inline (sorted desc) — no hidden "+N", so each wearable is named.
+        wearCell = '<span style="white-space:nowrap;">'
+          + Object.entries(wd).map(([k, v]) => `${esc(k)} <span style="color:var(--text-dim);">${fmtInt(v)}</span>`).join(' · ')
+          + '</span>';
       } else {
         wearCell = '<span style="color:var(--text-dim);">—</span>';
       }
