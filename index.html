@@ -4605,7 +4605,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
 
     el.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">${cards}</div>
-      <div style="font-size:11px;color:var(--text-dim);margin-top:14px;">Public studies only · min ${GAP_FLOOR} known · share = % of the study&rsquo;s known participants · <span style="color:var(--lime);">N×</span> = vs ecosystem baseline (≥1.4× highlighted) · trailing % = <span style="color:#34D399;">completion</span> (green ≥55% retains · amber 35–55 · red &lt;35). Rare segments are small-N and ethnicity coverage ~74% — directional. Favor formats that over-index <strong>and</strong> retain.</div>`;
+      <div style="font-size:11px;color:var(--text-dim);margin-top:14px;">Public studies only · min ${GAP_FLOOR} known · share = % of the study&rsquo;s known participants · <span style="color:var(--lime);">N×</span> = vs ecosystem baseline (≥1.4× highlighted) · trailing % = <span style="color:#34D399;">completion</span> (green ≥55% retains · amber 35–55 · red &lt;35). Rare segments are small-N and ethnicity coverage ~74% — directional. Favor formats that over-index <strong>and</strong> retain. <span style="color:var(--text-secondary);">Age bands are pulled straight from <code style="color:var(--text-secondary);">/api/demographics</code> (17-, 18-25 … 56-65, 66+); the API&rsquo;s top cut is <strong style="color:var(--text);">66+</strong>, not 65+, so there is no separate 65+ band — nothing here is estimated or back-calculated.</span></div>`;
   }
 
   function renderAll() {
