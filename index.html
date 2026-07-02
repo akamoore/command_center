@@ -1642,6 +1642,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
           joined: joinsVal ?? localMatch?.joined ?? null,
           leads: entry.leads ?? localMatch?.leads ?? null,
           onboarded: onbVal ?? localMatch?.onboarded ?? 0,
+          catalogActive: (typeof entry.catalogActive === 'boolean' ? entry.catalogActive : null),
           wearable: normWearable(entry.wearable) ?? localMatch?.wearable ?? null,
           days: parseDays(entry.days) ?? localMatch?.days ?? null,
           launchDate: entry.launchDate ?? localMatch?.launchDate ?? null,
@@ -3822,6 +3823,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return RETIRED_PUBLIC.some(r => n.includes(r));
   };
 
+  // FALLBACK (since the catalogActive rollout): catalogStatus now prefers the API's per-study
+  // catalogActive flag; this curated list is only consulted when that field is absent (pre-go-live).
   // Studies still SHOWN but no longer live on the participant catalog. Displayed but
   // marked "Off catalog" and excluded from the live count + health. Curated because the
   // ops API still reports off-catalog studies as "live" (doc #9) — new studies default to
@@ -3867,9 +3870,18 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     //    API's own status vocabulary is `live | complete | closed`, so `closed` (a
     //    study no longer running) is treated as terminal here too, not Unknown.
     if (['complete', 'completed', 'closed', 'done', 'ended', 'finished'].includes(raw)) return CATALOG_STATUS.completed;
-    // 2. Off catalog — curated lists win over the API's stale "live"; explicit API tokens too.
-    if (isOffCatalog(study.name) || isRetiredPublic(study.name)) return CATALOG_STATUS.off;
-    if (['off_catalog', 'off-catalog', 'offcatalog', 'retired', 'archived', 'inactive', 'removed'].includes(raw)) return CATALOG_STATUS.off;
+    // 2. Off catalog.
+    //    2a. Curated hard-exclusions (test / VEP / non-public studies) — always off, whatever the flag.
+    if (isRetiredPublic(study.name)) return CATALOG_STATUS.off;
+    //    2b. The API's catalogActive flag (visible-driven, automatic) is authoritative when present:
+    //        false = off; true = on the catalog (fall through to coming/live by status). Only when the
+    //        field is absent (pre-go-live) do we fall back to the curated OFF_CATALOG list + tokens.
+    const ca = (typeof study.catalogActive === 'boolean') ? study.catalogActive : null;
+    if (ca === false) return CATALOG_STATUS.off;
+    if (ca === null && (isOffCatalog(study.name) ||
+        ['off_catalog', 'off-catalog', 'offcatalog', 'retired', 'archived', 'inactive', 'removed'].includes(raw))) {
+      return CATALOG_STATUS.off;
+    }
     // 3. Coming soon — pre-launch.
     if (['coming', 'coming_soon', 'upcoming'].includes(raw)) return CATALOG_STATUS.coming;
     // 4. Live on catalog — launched and active.
@@ -4985,6 +4997,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     const studies = srcStudies.map(s => ({
       id: s.id, name: s.name, category: s.category || 'Other',
       status: s.status || null, statusEffective: s.statusEffective || s.status || null,
+      catalogActive: (typeof s.catalogActive === 'boolean' ? s.catalogActive : null),
       participants: Number(s.participants) || 0,
       new: Number(s.new) || 0, returning: Number(s.returning) || 0,
       completed: Number(s.completed) || 0,
