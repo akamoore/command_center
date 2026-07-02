@@ -5007,8 +5007,15 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   function psRenderKPIs() {
     const sum = psModel.summary;
     const returningPct = sum.totalParticipants > 0 ? (sum.returningParticipants / sum.totalParticipants * 100) : 0;
+    // Live-on-catalog studies + the participants inside them. Uses the same catalog-status
+    // resolver and participant counts as the per-study table below, so the numbers reconcile.
+    const liveStudies = (psModel.studies || []).filter(s => catalogStatus(s).key === 'live');
+    const liveCount = liveStudies.length;
+    const activeParticipants = liveStudies.reduce((a, s) => a + (psParticipantsFor(s) || 0), 0);
     const cards = [
       `<div class="kpi-card"><div class="kpi-label">Total Participants</div><div class="kpi-value teal">${sum.totalParticipants.toLocaleString()}</div><div class="kpi-sub">across ${sum.totalStudies} public studies</div></div>`,
+      `<div class="kpi-card"><div class="kpi-label">Studies Live on Catalog</div><div class="kpi-value green">${liveCount}</div><div class="kpi-sub">currently on the participant catalog</div></div>`,
+      `<div class="kpi-card"><div class="kpi-label">Active Participants</div><div class="kpi-value lime">${activeParticipants.toLocaleString()}</div><div class="kpi-sub">in studies live on the catalog</div></div>`,
       `<div class="kpi-card"><div class="kpi-label">Studies Completed</div><div class="kpi-value indigo">${sum.studiesCompleted}</div><div class="kpi-sub">of ${sum.totalStudies} public studies</div></div>`,
       `<div class="kpi-card"><div class="kpi-label">Avg Completion Rate</div><div class="kpi-value lime">${(sum.avgCompletionRate || 0).toFixed(1)}%</div><div class="kpi-sub">across challenges with completions</div></div>`,
       `<div class="kpi-card"><div class="kpi-label">New vs Returning</div><div class="kpi-value green">${returningPct.toFixed(0)}% returning</div><div class="kpi-sub">${sum.returningParticipants.toLocaleString()} returning · ${sum.newParticipants.toLocaleString()} new</div></div>`,
