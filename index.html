@@ -1255,6 +1255,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   let apiError = null;
   let publicStudiesApi = null;  // /api/public-studies — canonical per-study participant totals
   let commJoins7d = {};         // study id/name → joins in the last 7 days (recruiting days=7), for the Community table
+  let commJoins14d = {};        // study id/name → joins in the last 14 days (recruiting days=14), for the Community table
   let sendgridData = null;
   let appsflyerData = null;
   let metaAdsData = null;
@@ -4054,6 +4055,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
                 <td>${recCell}</td>
                 <td class="num">${ageCell}</td>
                 <td class="num">${jcellWin(jm.j7, 7)}</td>
+                <td class="num">${jcellWin(jm.j14, 14)}</td>
                 <td class="num">${jcellWin(jm.j30, 30)}</td>
                 <td class="num">${jcellWin(jm.j90, 90)}</td>
                 <td>${compCell}</td>
@@ -4070,7 +4072,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         <strong style="color:var(--text);">Participants</strong> = total who joined the study (from <code style="color:var(--text-secondary);">/api/public-studies</code> — the same number the per-study detail view shows) ·
         <strong style="color:var(--text);">Recruited</strong> = lifetime <strong>participants ÷ target</strong> (true progress) ·
         <strong style="color:var(--text);">Age</strong> = days on the catalog (today &minus; Start Date) — drives which join windows show ·
-        <strong style="color:var(--text);">Joins · 7d / 30d / 90d</strong> = new joins (people <em>starting</em>) in each window — the interest / keep-or-kill signal (7d from <code style="color:var(--text-secondary);">days=7</code>, 30d from <code style="color:var(--text-secondary);">runRate30d</code>, 90d = trailing 3 months of <code style="color:var(--text-secondary);">joinsByMonth</code>; <span style="color:var(--text-dim);">&mdash;</span> if the study isn&rsquo;t in the feed <em>or</em> hasn&rsquo;t been on the catalog a full window yet — a study live &lt; 7 / 30 / 90 days shows <span style="color:var(--text-dim);">&mdash;</span> for that window instead of repeating its lifetime count) ·
+        <strong style="color:var(--text);">Joins · 7d / 14d / 30d / 90d</strong> = new joins (people <em>starting</em>) in each window — the interest / keep-or-kill signal (7d from <code style="color:var(--text-secondary);">days=7</code>, 14d from <code style="color:var(--text-secondary);">days=14</code>, 30d from <code style="color:var(--text-secondary);">runRate30d</code>, 90d = trailing 3 months of <code style="color:var(--text-secondary);">joinsByMonth</code>; <span style="color:var(--text-dim);">&mdash;</span> if the study isn&rsquo;t in the feed <em>or</em> hasn&rsquo;t been on the catalog a full window yet — a study live &lt; 7 / 14 / 30 / 90 days shows <span style="color:var(--text-dim);">&mdash;</span> for that window instead of repeating its lifetime count) ·
         <strong style="color:var(--text);">Completed</strong> = onboarded &divide; joined for the recent 30-day cohort (<code style="color:var(--text-secondary);">days=30</code> window) ·
         <strong style="color:var(--text);">Compliance</strong> = days logged &divide; days expected (<code style="color:var(--text-secondary);">avgDaysTagged</code> &divide; tagged+missed, from <code style="color:var(--text-secondary);">/api/public-studies</code>) &mdash; how consistently enrolled participants logged.
         Counts are live from the API and <em>pending data-integrity verification with Manpreet.</em>
@@ -4084,6 +4086,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { key: 'recruited', label: 'Recruited' },
     { key: 'age', label: 'Age' },
     { key: 'joins7d', label: 'Joins · 7d' },
+    { key: 'joins14d', label: 'Joins · 14d' },
     { key: 'joins30d', label: 'Joins · 30d' },
     { key: 'joins90d', label: 'Joins · 90d' },
     { key: 'completed', label: 'Completed' },
@@ -4107,9 +4110,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       j90 = row.joinsByMonth.reduce((a, m) => a + (win.includes(m.month) ? (Number(m.joins) || 0) : 0), 0);
     }
     const nm = String(s.name || '').trim().toLowerCase();
-    const j7 = commJoins7d['#' + s.id] != null ? commJoins7d['#' + s.id]
-      : (commJoins7d[nm] != null ? commJoins7d[nm] : null);
-    return { j7, j30, j90 };
+    const lookup = map => map['#' + s.id] != null ? map['#' + s.id] : (map[nm] != null ? map[nm] : null);
+    const j7 = lookup(commJoins7d);
+    const j14 = lookup(commJoins14d);
+    return { j7, j14, j30, j90 };
   }
 
   // Days a study has been on the catalog (today − launchDate, the Start Date shown).
@@ -4129,6 +4133,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       case 'recruited': return s.joined ?? -1;
       case 'age': return catalogDaysFor(s) ?? -1;
       case 'joins7d': { const d = catalogDaysFor(s); if (d != null && d < 7) return -1; const j = commJoinsFor(s); return j.j7 == null ? -1 : j.j7; }
+      case 'joins14d': { const d = catalogDaysFor(s); if (d != null && d < 14) return -1; const j = commJoinsFor(s); return j.j14 == null ? -1 : j.j14; }
       case 'joins30d': { const d = catalogDaysFor(s); if (d != null && d < 30) return -1; const j = commJoinsFor(s); return j.j30 == null ? -1 : j.j30; }
       case 'joins90d': { const d = catalogDaysFor(s); if (d != null && d < 90) return -1; const j = commJoinsFor(s); return j.j90 == null ? -1 : j.j90; }
       case 'completed': return s.onboarded ?? -1;
@@ -4822,31 +4827,36 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // ============================================================
   async function loadAndRender() {
     try {
-      const [recruitData, sgData, afData, maData, psData, rec7Data] = await Promise.allSettled([
+      const [recruitData, sgData, afData, maData, psData, rec7Data, rec14Data] = await Promise.allSettled([
         dataService.fetchRecruitingData(selectedDays),
         dataService.fetchSendGridStats(),
         dataService.fetchAppsflyerStats(),
         dataService.fetchMetaAdsStats(),
         dataService.fetchPublicStudies(),
-        dataService.fetchRecruitingData(7),   // dedicated 7-day window for the Community table
+        dataService.fetchRecruitingData(7),    // dedicated 7-day window for the Community table
+        dataService.fetchRecruitingData(14),   // dedicated 14-day (2-week) window for the Community table
       ]);
       apiData = recruitData.status === 'fulfilled' ? recruitData.value : null;
       sendgridData = sgData.status === 'fulfilled' ? sgData.value : null;
       appsflyerData = afData.status === 'fulfilled' ? afData.value : null;
       metaAdsData = maData.status === 'fulfilled' ? maData.value : null;
       publicStudiesApi = psData.status === 'fulfilled' ? psData.value : null;
-      // Build the 7-day joins map (study id/name → joins in last 7 days). Non-blocking.
-      commJoins7d = {};
-      if (rec7Data.status === 'fulfilled') {
-        const by = (rec7Data.value && rec7Data.value.onboarding && rec7Data.value.onboarding.byStudy) || [];
+      // Build the recent-joins maps (study id/name → joins in the window). Non-blocking.
+      const buildJoinsMap = res => {
+        const map = {};
+        if (res.status !== 'fulfilled') return map;
+        const by = (res.value && res.value.onboarding && res.value.onboarding.byStudy) || [];
         by.forEach(e => {
           const j = e.joined ?? e.joins ?? e.count;
           if (j == null) return;
           const nm = String(e.studyName || e.experimentTitle || e.name || '').trim().toLowerCase();
-          if (nm) commJoins7d[nm] = Number(j) || 0;
-          if (e.experimentId != null) commJoins7d['#' + e.experimentId] = Number(j) || 0;
+          if (nm) map[nm] = Number(j) || 0;
+          if (e.experimentId != null) map['#' + e.experimentId] = Number(j) || 0;
         });
-      }
+        return map;
+      };
+      commJoins7d = buildJoinsMap(rec7Data);
+      commJoins14d = buildJoinsMap(rec14Data);
       apiError = recruitData.status === 'rejected' ? recruitData.reason.message : null;
     } catch (err) {
       apiError = err.message;
