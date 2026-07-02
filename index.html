@@ -4389,10 +4389,39 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         </div>
       </div>` : '';
 
+    // Registration → onboarding funnel from Manpreet's new /api/demographics funnel block.
+    // Defensive: finds the funnel object wherever it lands; renders nothing until it's present.
+    const funnelSrc = ecoData || {};
+    const fnl = funnelSrc.funnel || (funnelSrc.summary && funnelSrc.summary.funnel)
+      || (('registered' in funnelSrc) ? funnelSrc : (funnelSrc.summary && ('registered' in funnelSrc.summary) ? funnelSrc.summary : null));
+    const funnelBlock = (scope === 'all' && fnl && Number.isFinite(Number(fnl.registered))) ? (() => {
+      const g = k => { const v = Number(fnl[k]); return Number.isFinite(v) ? v : null; };
+      const registered = g('registered'), joinedAny = g('joinedAnyStudy'), joinedInScope = g('joinedInScope'),
+            onboarded = g('onboarded'), neverJoined = g('registeredNeverJoined'), neverOnboarded = g('joinedNeverOnboarded');
+      const base = registered || 1;
+      const rung = (label, n, color, leakN, leakLabel) => n == null ? '' : `<div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:4px;gap:12px;">
+          <span style="color:var(--text);">${label}</span>
+          <span style="color:var(--text-dim);white-space:nowrap;"><strong style="color:var(--text);">${fmtInt(n)}</strong> · ${(n / base * 100).toFixed(0)}%</span>
+        </div>
+        <div class="ps-bar" style="width:100%;height:10px;"><div class="ps-bar-fill" style="width:${Math.min(100, n / base * 100)}%;background:${color};"></div></div>
+        ${leakN != null ? `<div style="font-size:10.5px;color:var(--rose);margin-top:3px;">&#8627; ${fmtInt(leakN)} ${leakLabel}</div>` : ''}
+      </div>`;
+      return `<div style="margin-bottom:18px;padding:16px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border-dark);border-radius:12px;">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:14px;">Registration &rarr; onboarding funnel</div>
+        ${rung('Registered <span style="color:var(--text-dim);font-weight:400;">(non-tester)</span>', registered, 'var(--teal)', null, '')}
+        ${rung('Joined &ge;1 study', joinedAny, 'var(--teal)', neverJoined, 'signed up, never joined a study')}
+        ${rung('Joined an in-scope study <span style="color:var(--text-dim);font-weight:400;">(= distinct participants)</span>', joinedInScope, 'var(--lime)', null, '')}
+        ${rung('Onboarded <span style="color:var(--text-dim);font-weight:400;">(finished the 6 steps)</span>', onboarded, 'var(--lime)', neverOnboarded, 'joined but never onboarded')}
+        <div style="font-size:11px;color:var(--text-dim);margin-top:10px;line-height:1.55;">Each rung is a subset of the one above; <strong style="color:var(--text-secondary);">joined in-scope</strong> reconciles with the distinct-participant count. Live from <code style="color:var(--text-secondary);">/api/demographics</code>.</div>
+      </div>`;
+    })() : '';
+
     host.innerHTML = `
       <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--text-dim);">${headParts.map(p => `<span>${p}</span>`).join('')}</div>
       <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px;">${note} Live from <code style="color:var(--text-secondary);">/api/demographics</code>.</div>
       ${breakdown}
+      ${funnelBlock}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">${cards || '<div style="color:var(--text-dim);font-size:13px;">No demographic breakdown reported for this selection.</div>'}</div>`;
   }
 
