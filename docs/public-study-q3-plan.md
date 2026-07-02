@@ -65,13 +65,13 @@ The view holds that wearable's **current internal gender / age / ethnicity %s** 
 **Apple Watch → 500 (base).** The tractable build — steps/movement formats over-index Apple
 Watch heavily.
 - **The Daily Steps Streak** *(proposed)* — steps challenge; pulls Apple Watch + Fitbit + Garmin at once.
-- **The Nature Dose** *(relaunch)* — over-indexes Apple Watch (4.7×), top momentum (~30 joins/mo, 72% completion).
+- **The Nature Dose** *(relaunch)* — over-indexes Apple Watch (4.7×), top momentum (~30 joins/mo, 72% completion). `[Mackenzie: verify]`
 - Organic-led + small paid top-up to the Apple ecosystem (Matt).
 
 **WHOOP → 1,000 (priority, hardest).** ⚠️ **WHOOP barely moves through public studies** (best
-public lift ~1.6×). Hitting 1,000 (+551) almost certainly needs **paid / partner / clinical
+public lift ~1.6×). `[Mackenzie: verify]` Hitting 1,000 (+551) almost certainly needs **paid / partner / clinical
 cross-over**, not public challenges alone — flag this as the plan's main risk.
-- Public bridge: **The Gratitude Effect** *(relaunch)* lifts WHOOP + Garmin as a side effect (already ~21 joins/mo, 60% completion).
+- Public bridge: **The Gratitude Effect** *(relaunch)* lifts WHOOP + Garmin as a side effect (already ~21 joins/mo, 60% completion). `[Mackenzie: verify]`
 - Real lever: WHOOP-targeted paid + partner recruitment. Confirm approach with Pankaj/Matt.
 
 **Fitbit / Garmin — ride-along only.** The Daily Steps Streak reaches both. No dedicated
@@ -84,16 +84,16 @@ spend unless we decide to fund one to the 500 floor.
 Each is one-factor, tagged by the **wearable** it builds (demographic effects are secondary/derived).
 
 ### ▸ The Daily Steps Streak — *Proposed* — **builds: Apple Watch + Fitbit + Garmin**
-- **Why:** all three mainstream wearables over-index 5–8× on steps/movement — one study, three wearables.
+- **Why:** all three mainstream wearables over-index 5–8× on steps/movement — one study, three wearables. `[Mackenzie: verify]`
 - **Budget:** organic, broad reach + small paid via wearable-specific targeting (Matt).
 - **Exit:** target hit · or no new joins in 2 months. **Owner:** Katie · **Review:** Mackenzie · **QA:** Nisha
 
 ### ▸ The Nature Dose (relaunch) — *Proposed* — **builds: Apple Watch**
-- **Why:** over-indexes Apple Watch (4.7×), highest momentum in the catalog (~30 joins/mo, 72% completion).
+- **Why:** over-indexes Apple Watch (4.7×), highest momentum in the catalog (~30 joins/mo, 72% completion). `[Mackenzie: verify]`
 - **Budget:** organic + small paid to the Apple ecosystem. **Owner:** Katie · **Review:** Mackenzie · **QA:** Nisha
 
 ### ▸ The Gratitude Effect (relaunch) — *Proposed* — **builds: WHOOP + Garmin (bridge)**
-- **Why:** best public-study WHOOP/Garmin lift; already ~21 joins/mo at 60% completion. Diversity lift is a bonus, not the goal.
+- **Why:** best public-study WHOOP/Garmin lift; already ~21 joins/mo at 60% completion. `[Mackenzie: verify]` Diversity lift is a bonus, not the goal.
 - **Budget:** organic + small paid top-up. **Owner:** Katie · **Review:** Mackenzie · **QA:** Nisha
 
 ### ▸ Energy / sports formats (Celsius scale · Game-Day Energy) — *optional*
@@ -221,7 +221,7 @@ The order of operations before we commit paid budget.
   distinct people — a distinct-person wearable count would need a different API cut. Targets
   are in the same unit; confirm that's the unit you want to be held to.
 - **WHOOP is the risk.** +551 WHOOP through public studies alone is not realistic (best lift
-  ~1.6×). The target assumes a paid/partner/clinical-crossover lever — decide that lever before committing.
+  ~1.6×). `[Mackenzie: verify]` The target assumes a paid/partner/clinical-crossover lever — decide that lever before committing.
 - **Projected demographics are live, not in this doc.** They're in the Wearable-first mix
   view so they can't go stale; this doc intentionally doesn't restate them as numbers.
 - **Floor is a policy, not a measurement yet** — confirm the 10% base (participations vs.
