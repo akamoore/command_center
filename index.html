@@ -3824,7 +3824,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   const OFF_CATALOG = [
     'seasonal superfoods', 'power nap', 'fasting reset', 'wim hof', '10k steps',
     'box breathing', 'septasync',
-    'ghost effect', 'monster effect', 'red bull', '14 day yoga',   // pulled Jul 2, 2026
+    'ghost effect', 'monster effect', 'red bull', '14 day yoga', '4-7-8 effect (extended)',   // pulled Jul 2, 2026
   ];
   const isOffCatalog = name => {
     const n = (name || '').toLowerCase();
@@ -5102,8 +5102,13 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   // Per docs/public-study-catalog-rules.md, whether a study stays or is retired is judged
   // on recent JOINS (people STARTING the study), never on completion or compliance. The
   // cutoff is a single, clearly-labeled value so it's easy to change while we settle it.
-  const RETIRE_IF_JOINS_90D_BELOW = 3;   // a LIVE study with fewer joins than this over the
-                                         // last ~90 days (3 calendar months) → retire candidate
+  // Retire rule (docs/public-study-catalog-rules.md): a study retires only if it's mature AND
+  // losing momentum — on the catalog ≥ 3 months AND its monthly joins are continuously
+  // declining (non-increasing across the last N completed months, with a real net drop). The
+  // current partial month is excluded so a mid-month dip can't trigger it; a brand-new study
+  // or a single off month won't flag. Both thresholds are tunable.
+  const RETIRE_MIN_CATALOG_DAYS = 90;   // must have been on the catalog ≥ 3 months
+  const RETIRE_DECLINE_MONTHS = 3;      // # of completed months that must show the downtrend
 
   // Trailing n calendar months as 'YYYY-MM', from a base 'YYYY-MM'.
   function ymTrailing(baseYm, n) {
@@ -5130,6 +5135,19 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return { joins7d, joins30d: s.runRate30d == null ? null : Number(s.runRate30d), joins90d: joins90, lastJoinMonth };
   }
 
+  // "Continuously declining" — monthly joins non-increasing across the last N completed months
+  // (current partial month excluded) with a real net drop (newest < oldest). Missing months
+  // count as 0; needs prior activity to have something to decline from.
+  function psDecliningTrend(s, baseYm) {
+    const byMonth = {};
+    (Array.isArray(s.joinsByMonth) ? s.joinsByMonth : []).forEach(m => { byMonth[m.month] = Number(m.joins) || 0; });
+    const win = ymTrailing(baseYm, RETIRE_DECLINE_MONTHS + 1).slice(1).reverse();   // last N completed months, oldest → newest
+    const series = win.map(ym => byMonth[ym] || 0);
+    if (series[0] <= 0) return false;                                    // no prior activity to decline from
+    for (let i = 1; i < series.length; i++) if (series[i] > series[i - 1]) return false;   // any month-over-month rise breaks it
+    return series[series.length - 1] < series[0];                        // real net decline over the window
+  }
+
   function psFmtMonth(ym) {
     if (!ym) return '—';
     const [y, m] = String(ym).split('-').map(Number);
@@ -5139,6 +5157,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
 
   const psJrColumns = [
     { key: 'name', label: 'Study' },
+    { key: 'category', label: 'Category' },
     { key: 'status', label: 'Status' },
     { key: 'participants', label: 'Participants' },
     { key: 'age', label: 'Age' },
@@ -5158,15 +5177,19 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     const rows = (psModel.studies || []).map(s => {
       const cat = catalogStatus(s);
       const m = psJoinMetrics(s, baseYm);
-      const retire = cat.key === 'live' && (m.joins90d || 0) < RETIRE_IF_JOINS_90D_BELOW;
+      const catDays = catalogDaysFor(s);
+      const retire = cat.key === 'live'
+        && (catDays != null && catDays >= RETIRE_MIN_CATALOG_DAYS)
+        && psDecliningTrend(s, baseYm);
       return { s, cat, joins7d: m.joins7d, joins30d: m.joins30d, joins90d: m.joins90d, lastJoinMonth: m.lastJoinMonth, retire,
-        participants: psParticipantsFor(s), ageDays: catalogDaysFor(s), compl: psComplianceFor(s) };
+        participants: psParticipantsFor(s), ageDays: catDays, compl: psComplianceFor(s) };
     });
 
     const dir = psJrSortDir === 'asc' ? 1 : -1;
     const val = (r) => {
       switch (psJrSortCol) {
         case 'name':     return r.s.name || '';
+        case 'category': return r.s.category || '';
         case 'status':   return r.cat.label || '';
         case 'participants': return r.participants == null ? -1 : r.participants;
         case 'age':          return r.ageDays == null ? -1 : r.ageDays;
@@ -5188,8 +5211,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
 
     const head = psJrColumns.map(c => {
       const sorted = psJrSortCol === c.key;
-      const arrow = sorted ? (psJrSortDir === 'asc' ? ' ▲' : ' ▼') : '';
-      return `<th data-jrcol="${c.key}" class="${sorted ? 'sorted' : ''}" style="cursor:pointer;white-space:nowrap;">${c.label}<span class="sort-arrow">${arrow}</span></th>`;
+      return `<th data-jrcol="${c.key}" class="${sorted ? 'sorted' : ''}" style="cursor:pointer;white-space:nowrap;" title="Click to sort">${c.label} <span class="sort-arrow" style="${sorted ? '' : 'opacity:0.3;'}">${sorted ? (psJrSortDir === 'asc' ? '▲' : '▼') : '⇅'}</span></th>`;
     }).join('');
 
     const body = rows.map(r => {
@@ -5203,14 +5225,16 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const complCell = r.compl
         ? `<span style="font-weight:600;color:${cp >= 90 ? 'var(--green)' : cp >= 70 ? 'var(--yellow)' : 'var(--rose)'};white-space:nowrap;">${cp.toFixed(0)}%</span> <span style="color:var(--text-dim);white-space:nowrap;"> ${r.compl.tagged.toFixed(1)}/${(r.compl.tagged + r.compl.missed).toFixed(1)}d</span>`
         : '<span style="color:var(--text-dim);">—</span>';
+      const catLbl = r.s.category === 'FitnessAndActivity' ? 'Fitness & Activity' : (r.s.category || '—');
       return `<tr${off ? ' style="opacity:0.55;"' : ''}>
         <td>${esc(r.s.name)}</td>
+        <td><span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><span style="width:8px;height:8px;border-radius:50%;background:${psCategoryColor(r.s.category)};flex-shrink:0;"></span>${esc(catLbl)}</span></td>
         <td><span style="color:${r.cat.color};font-weight:600;white-space:nowrap;">${r.cat.dot} ${r.cat.label}</span></td>
         <td class="num">${partCell}</td>
         <td class="num">${ageCell}</td>
         <td class="num">${num(r.joins7d)}</td>
         <td class="num">${num(r.joins30d)}</td>
-        <td class="num" style="font-weight:700;color:${(r.joins90d || 0) < RETIRE_IF_JOINS_90D_BELOW && r.cat.key === 'live' ? '#FB7185' : 'var(--text)'};">${fmtInt(r.joins90d)}</td>
+        <td class="num" style="font-weight:700;color:${r.retire ? '#FB7185' : 'var(--text)'};">${fmtInt(r.joins90d)}</td>
         <td style="white-space:nowrap;">${psFmtMonth(r.lastJoinMonth)}</td>
         <td>${complCell}</td>
         <td>${retireCell}</td>
@@ -5219,13 +5243,13 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
 
     host.innerHTML = `
       <div style="padding:14px 18px 2px;font-size:12px;color:var(--text-dim);line-height:1.6;">
-        Keep-or-kill is judged on <strong style="color:var(--text-secondary);">recent joins (starts)</strong> — never completion or compliance (<a href="https://github.com/akamoore/command_center/blob/main/docs/public-study-catalog-rules.md" target="_blank" rel="noopener" style="color:var(--lime);">catalog rules</a>).
+        A study is a retire candidate only when it&rsquo;s <strong style="color:var(--text-secondary);">mature and losing steam</strong> — on the catalog &ge; 3 months <em>and</em> its joins are continuously declining — judged on <strong style="color:var(--text-secondary);">joins (starts)</strong>, never completion or compliance (<a href="https://github.com/akamoore/command_center/blob/main/docs/public-study-catalog-rules.md" target="_blank" rel="noopener" style="color:var(--lime);">catalog rules</a>).
         <strong style="color:var(--text);">7d</strong> from <code style="color:var(--text-secondary);">/api/recruiting?days=7</code>, <strong style="color:var(--text);">30d</strong> from <code style="color:var(--text-secondary);">runRate30d</code>, <strong style="color:var(--text);">90d</strong> = trailing 3 months of <code style="color:var(--text-secondary);">joinsByMonth</code>. Last-join is month-level — the feed exposes no day-precise timestamp. <strong style="color:var(--text);">Participants / Age / Compliance</strong> are shown for context (same as the study list) and <em>don&rsquo;t</em> affect the keep-or-kill call.
       </div>
       <div style="padding:8px 18px 14px;">
         <div style="display:inline-flex;gap:14px;flex-wrap:wrap;align-items:center;background:rgba(251,113,133,0.08);border:1px solid rgba(251,113,133,0.25);border-radius:10px;padding:10px 14px;font-size:12px;">
           <span><strong style="color:#FB7185;">Retire candidates: ${candidates.length}</strong></span>
-          <span style="color:var(--text-dim);">rule: live study with &lt; <strong style="color:var(--text);">${RETIRE_IF_JOINS_90D_BELOW}</strong> joins in 90d · adjust <code style="color:var(--text-secondary);">RETIRE_IF_JOINS_90D_BELOW</code> in the code</span>
+          <span style="color:var(--text-dim);">rule: live &amp; on the catalog &ge; 3 months &amp; joins <strong style="color:var(--text);">continuously declining</strong> (non-increasing across the last ${RETIRE_DECLINE_MONTHS} completed months, net drop) · tune <code style="color:var(--text-secondary);">RETIRE_MIN_CATALOG_DAYS</code> / <code style="color:var(--text-secondary);">RETIRE_DECLINE_MONTHS</code></span>
         </div>
         <div style="font-size:12px;color:var(--text-dim);margin-top:10px;">
           <strong style="color:var(--text);">Catalog if retired:</strong> ${live.length} live &rarr; <strong style="color:#34D399;">${survivors} kept</strong>${candidates.length ? ' · <span style="color:#FB7185;">' + candidates.length + ' retired</span> — ' + candidates.map(r => esc(r.s.name)).join(', ') : ' · none flagged'}
