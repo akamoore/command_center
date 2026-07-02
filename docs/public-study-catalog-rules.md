@@ -20,13 +20,17 @@ dashboard's **Interest & join-rate** view (Public Studies tab).
 - **Exception:** a study **clearly performing** (strong, sustained join rate) stays. Don't
   retire a winner on a calendar.
 
-## 3. Keep or kill = **interest** (recent join rate)
+## 3. Keep or kill = **interest** (join rate)
 
-- The **one** signal that retires a study is **interest = recent joins** (people *starting*
-  it), measured on a **7-day and 30-day** window.
-- **Collapse → retirement candidate:** if new joins dry up over a **1–2 week** window, flag
-  it to retire.
-- Completion and compliance do **not** retire a study — only interest does.
+- The **one** signal that retires a study is **interest = joins** (people *starting* it) —
+  never completion or compliance.
+- **Retire criteria (rigorous):** a study is flagged to retire only when it is **mature *and*
+  losing momentum** — it has been on the catalog **≥ 3 months** *and* its monthly joins are
+  **continuously declining** (non-increasing across the last **3 completed months**, with a
+  real net drop). A brand-new study, or one with a single off month, is **not** flagged.
+- The **current (partial) month is excluded** so a mid-month dip can't trigger a retire.
+- Completion and compliance do **not** retire a study — only interest (joins) does.
+- Both thresholds are tunable in code (`RETIRE_MIN_CATALOG_DAYS`, `RETIRE_DECLINE_MONTHS`).
 
 ## 4. Compliance is a **separate, secondary** signal — our problem to fix
 
