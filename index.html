@@ -3815,13 +3815,16 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return RETIRED_PUBLIC.some(r => n.includes(r));
   };
 
-  // Studies still SHOWN but no longer live on the participant catalog (verified
-  // Jun 2026 against the in-app "Good while you wait" feed). They're displayed but
-  // marked "Off catalog" and excluded from the live count + health. Until the ops
-  // API reports catalog state (doc #9), this is curated — new studies default to live.
+  // Studies still SHOWN but no longer live on the participant catalog. Displayed but
+  // marked "Off catalog" and excluded from the live count + health. Curated because the
+  // ops API still reports off-catalog studies as "live" (doc #9) — new studies default to
+  // live. Verified Jul 2, 2026 against the in-app "Good while you wait" catalog (Katie):
+  // Hydration is back ON the catalog (removed here); Ghost / Monster / Red Bull / 14 Day
+  // Yoga were pulled that morning (added). Snapshot — will drift until the API exposes state.
   const OFF_CATALOG = [
-    'hydration effect', 'seasonal superfoods', 'power nap', 'fasting reset',
-    'wim hof', '10k steps', 'box breathing', 'septasync',
+    'seasonal superfoods', 'power nap', 'fasting reset', 'wim hof', '10k steps',
+    'box breathing', 'septasync',
+    'ghost effect', 'monster effect', 'red bull', '14 day yoga',   // pulled Jul 2, 2026
   ];
   const isOffCatalog = name => {
     const n = (name || '').toLowerCase();
