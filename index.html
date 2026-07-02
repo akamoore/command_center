@@ -3898,6 +3898,28 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return (hit && hit.participants != null) ? Number(hit.participants) : null;
   }
 
+  // Per-study wearable breakdown (real device counts) from the live /api/demographics
+  // per-study marginals — matched to the study by id, then by name (same pattern as
+  // psApiRowFor / the Gap view). Consolidates device-name variants (Whoop/Whoop V2,
+  // Apple Health Kit/Apple Watch) via ECO_WEARABLE_LABEL and sorts desc. Needs ecoData
+  // loaded (psRenderAll loads it before the table); returns null if unavailable/unmatched.
+  function psWearablesForStudy(study) {
+    if (!ecoData || !Array.isArray(ecoData.studies) || !study) return null;
+    const list = ecoData.studies;
+    let hit = study.id != null ? list.find(e => e && String(e.id) === String(study.id)) : null;
+    if (!hit && study.name) {
+      const nm = String(study.name).trim().toLowerCase();
+      hit = list.find(e => e && String(e.name || '').trim().toLowerCase() === nm);
+    }
+    if (!hit || !hit.wearable || typeof hit.wearable !== 'object') return null;
+    const labeled = {};
+    for (const [slug, n] of Object.entries(hit.wearable)) {
+      const label = ECO_WEARABLE_LABEL[slug] || slug;
+      labeled[label] = (labeled[label] || 0) + (Number(n) || 0);
+    }
+    return Object.keys(labeled).length ? psSortCountObj(labeled) : null;
+  }
+
   // Compliance = logging adherence: the share of expected logging days a study's
   // participants actually logged, avgDaysTagged ÷ (avgDaysTagged + avgDaysMissed),
   // from /api/public-studies. Returns null when the feed has no logging data for the
@@ -5182,6 +5204,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { key: 'retire', label: 'Retire?' },
     { key: 'health', label: 'Health' },
     { key: 'participants', label: 'Participants' },
+    { key: 'wearables', label: 'Wearables' },
     { key: 'new', label: 'New' },
     { key: 'returning', label: 'Returning' },
     { key: 'completed', label: 'Completed' },
@@ -5209,7 +5232,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         && psDecliningTrend(s, baseYm);
       const isLive = cat.key === 'live';
       return { s, cat, isLive, joins7d: m.joins7d, joins30d: m.joins30d, joins90d: m.joins90d, lastJoinMonth: m.lastJoinMonth, retire,
-        participants: psParticipantsFor(s), ageDays: catDays, compl: psComplianceFor(s), health: isLive ? psHealth(s) : null };
+        participants: psParticipantsFor(s), ageDays: catDays, compl: psComplianceFor(s), health: isLive ? psHealth(s) : null,
+        wearables: psWearablesForStudy(s) };
     });
 
     const dir = psJrSortDir === 'asc' ? 1 : -1;
@@ -5219,6 +5243,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         case 'category': return r.s.category || '';
         case 'status':   return r.cat.label || '';
         case 'participants': return r.participants == null ? -1 : r.participants;
+        case 'wearables':    return r.wearables ? Object.values(r.wearables).reduce((a, b) => a + b, 0) : -1;
         case 'age':          return r.ageDays == null ? -1 : r.ageDays;
         case 'compliance':   return r.compl ? r.compl.pct : -1;
         case 'joins7d':  return r.joins7d == null ? -1 : r.joins7d;
@@ -5267,6 +5292,20 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const rateColor = s.completionRate >= 70 ? 'var(--green)' : s.completionRate >= 50 ? 'var(--lime)' : s.completionRate > 0 ? 'var(--yellow)' : 'var(--text-dim)';
       const catLbl = s.category === 'FitnessAndActivity' ? 'Fitness & Activity' : (s.category || '—');
       const launch = s.launchDate ? psFmtDate(s.launchDate) : '—';
+      const wd = r.wearables;
+      let wearCell;
+      if (wd && Object.keys(wd).length) {
+        const allw = Object.entries(wd);
+        const shown = allw.slice(0, 3);
+        const restN = allw.length - shown.length;
+        const fullw = allw.map(([k, v]) => `${k}: ${fmtInt(v)}`).join(' · ');
+        wearCell = `<span title="${esc(fullw)}" style="white-space:nowrap;">`
+          + shown.map(([k, v]) => `${esc(k)} <span style="color:var(--text-dim);">${fmtInt(v)}</span>`).join(' · ')
+          + (restN > 0 ? ` <span style="color:var(--text-dim);">+${restN}</span>` : '')
+          + `</span>`;
+      } else {
+        wearCell = '<span style="color:var(--text-dim);">—</span>';
+      }
       return `<tr${off ? ' style="opacity:0.55;"' : ''}>
         <td title="${esc(s.name)}">${esc(s.name)}</td>
         <td><span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><span style="width:8px;height:8px;border-radius:50%;background:${psCategoryColor(s.category)};flex-shrink:0;"></span>${esc(catLbl)}</span></td>
@@ -5274,6 +5313,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         <td>${retireCell}</td>
         <td>${healthCell}</td>
         <td class="num">${partCell}</td>
+        <td>${wearCell}</td>
         <td class="num">${fmtInt(Number(s.new) || 0)}</td>
         <td class="num">${fmtInt(Number(s.returning) || 0)}</td>
         <td class="num">${fmtInt(Number(s.completed) || 0)}</td>
@@ -5434,6 +5474,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       psDestroyCharts();
       psRenderSourceBadge();
       psRenderKPIs();
+      // Load live demographics up front so the per-study table's Wearables column (and the
+      // wearable donut below) have real device data. Optional for this tab — a failure must
+      // not break the table/KPIs, so it's guarded; the cells degrade to "—".
+      try { await ensureEcoData(); } catch (e) { /* demographics unavailable */ }
       psRenderJoinRate();
       psRenderCompletionChart();
       psCharts.gender = psDoughnut('#ps-chart-gender', psModel.gender);
