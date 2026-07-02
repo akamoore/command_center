@@ -1055,6 +1055,7 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
     <div class="ps-section">
       <div class="ps-section-title">Wearable Distribution</div>
       <div class="ps-chart-card" style="max-width:520px;">
+        <div id="ps-wearable-note" style="font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.5;">Real device mix, live from the demographics feed — not study tags.</div>
         <div class="ps-chart-wrap"><canvas id="ps-chart-wearables"></canvas></div>
       </div>
     </div>
@@ -4247,6 +4248,16 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return all.filter(s => String(s.id) === String(scope));   // a single study, by id
   }
 
+  // Load the live /api/demographics payload once — shared by the Ecosystem view and the
+  // Public Studies wearable donut. Drops test/internal studies, same as renderEcosystem.
+  async function ensureEcoData() {
+    if (ecoData) return ecoData;
+    const d = await dataService.fetchDemographics();
+    if (d && Array.isArray(d.studies)) d.studies = d.studies.filter(s => !isExcludedStudyName(s && s.name));
+    ecoData = d;
+    return ecoData;
+  }
+
   function ecoRenderCards(scope) {
     const host = $('#eco-cards');
     if (!host) return;
@@ -4473,12 +4484,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     if (!el || ecosystemLoaded) return;
     el.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Loading ecosystem demographics…</div>';
     try {
-      ecoData = await dataService.fetchDemographics();
-      // Drop test/internal studies from the ecosystem list (confirmed name-marker filter),
-      // so the public scope, study selector, rollup, and gap cross-tab all exclude them.
-      if (ecoData && Array.isArray(ecoData.studies)) {
-        ecoData.studies = ecoData.studies.filter(s => !isExcludedStudyName(s && s.name));
-      }
+      await ensureEcoData();   // shared loader (also feeds the Public Studies wearable donut)
     } catch (err) {
       el.innerHTML = `<div style="color:var(--text-dim);font-size:13px;">Ecosystem data unavailable — ${esc(err.message)}.</div>`;
       return;
@@ -5437,7 +5443,35 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       // Few buckets (e.g. Region) read better as a doughnut; many (Ethnicity) as a bar.
       const geoChart = Object.keys(psModel.geo).length <= 6 ? psDoughnut : psBar;
       psCharts.geo = geoChart('#ps-chart-geo', psModel.geo);
-      psCharts.wearables = psDoughnut('#ps-chart-wearables', psModel.wearables);
+      // Wearable distribution — REAL per-device counts from the live /api/demographics
+      // cross-tab, not the old study-tag "reach" rollup. Prefer public-study scope; fall
+      // back to ecosystem-wide if public has no device data. Honest "unavailable" if the
+      // cross-tab is down — no misleading estimate is substituted.
+      try {
+        await ensureEcoData();
+        const rollup = sc => (ecoData && Array.isArray(ecoData.studies)) ? (ecoRollup(ecoStudiesForScope(sc)).wearable || {}) : {};
+        let scope = 'public';
+        let rolled = rollup('public');
+        if (!Object.keys(rolled).length) { scope = 'all'; rolled = rollup('all'); }
+        const labeled = {};
+        for (const [slug, n] of Object.entries(rolled)) {
+          const label = ECO_WEARABLE_LABEL[slug] || slug;
+          labeled[label] = (labeled[label] || 0) + (Number(n) || 0);
+        }
+        const noteEl = document.getElementById('ps-wearable-note');
+        if (noteEl) noteEl.innerHTML = scope === 'public'
+          ? 'Real device mix of <strong style="color:var(--text-secondary);">public-study participants</strong>, live from the demographics feed — not study tags.'
+          : 'Real device mix across <strong style="color:var(--text-secondary);">all tracked participants</strong> (ecosystem-wide), live from the demographics feed — not study tags.';
+        const wearHost = document.getElementById('ps-chart-wearables');
+        if (Object.keys(labeled).length) {
+          psCharts.wearables = psDoughnut('#ps-chart-wearables', psSortCountObj(labeled));
+        } else if (wearHost && wearHost.parentElement) {
+          wearHost.parentElement.innerHTML = '<div style="color:var(--text-dim);font-size:13px;line-height:1.6;padding:8px 0;">Real wearable distribution unavailable — the live <code>/api/demographics</code> cross-tab returned nothing. No study-tag estimate is substituted.</div>';
+        }
+      } catch (e) {
+        const wearHost = document.getElementById('ps-chart-wearables');
+        if (wearHost && wearHost.parentElement) wearHost.parentElement.innerHTML = '<div style="color:var(--text-dim);font-size:13px;line-height:1.6;padding:8px 0;">Real wearable distribution unavailable — ' + esc(e.message) + '. No study-tag estimate is substituted.</div>';
+      }
       psRenderedSource = model.source;
     } finally {
       psLoading = false;
