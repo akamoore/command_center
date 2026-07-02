@@ -516,6 +516,37 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
       .ps-table thead th, .ps-table tbody td { padding: 6px 6px; }
     }
 
+    /* Combined per-study table — freeze Study + Category while scrolling right.
+       Sticky needs border-collapse:separate (set on .ps-table above); widths are
+       pinned with box-sizing:border-box so column 2's left offset is exact. */
+    #ps-joinrate-table th:first-child,
+    #ps-joinrate-table td:first-child,
+    #ps-joinrate-table th:nth-child(2),
+    #ps-joinrate-table td:nth-child(2) {
+      position: sticky; z-index: 1; background: var(--surface);
+    }
+    #ps-joinrate-table th:first-child,
+    #ps-joinrate-table td:first-child {
+      left: 0; box-sizing: border-box;
+      width: 190px; min-width: 190px; max-width: 190px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #ps-joinrate-table th:nth-child(2),
+    #ps-joinrate-table td:nth-child(2) {
+      left: 190px; box-sizing: border-box;
+      width: 160px; min-width: 160px; max-width: 160px;
+      overflow: hidden;
+      border-right: 1px solid rgba(255,255,255,0.14);
+    }
+    #ps-joinrate-table thead th:first-child,
+    #ps-joinrate-table thead th:nth-child(2) { z-index: 3; }
+    #ps-joinrate-table tbody tr:hover td:first-child,
+    #ps-joinrate-table tbody tr:hover td:nth-child(2) { background: #1e1e1e; }
+    @media (max-width: 768px) {
+      #ps-joinrate-table th:first-child, #ps-joinrate-table td:first-child { width: 132px; min-width: 132px; max-width: 132px; }
+      #ps-joinrate-table th:nth-child(2), #ps-joinrate-table td:nth-child(2) { left: 132px; width: 116px; min-width: 116px; max-width: 116px; }
+    }
+
     /* Benchmarks */
     .bench-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .bench-pill {
@@ -971,7 +1002,7 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
     <div class="kpi-grid" id="ps-kpi-grid"></div>
 
     <div class="ps-section">
-      <div class="ps-section-title">Interest &amp; join-rate — keep-or-kill signal</div>
+      <div class="ps-section-title">Per-study detail &amp; keep-or-kill signal</div>
       <div class="ps-chart-card" style="padding:0;overflow-x:auto;">
         <div id="ps-joinrate-content"></div>
       </div>
@@ -986,7 +1017,7 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
           <span style="font-size:11px;font-weight:400;color:var(--text-dim);">· policy · click to expand</span>
         </summary>
         <div style="margin-top:14px;font-size:13px;color:var(--text-secondary);line-height:1.65;">
-          <p style="margin:0 0 14px;color:var(--text-dim);">How we size, rotate, and prune the catalog — so keep/kill is policy, not a gut call. The signals behind it are in the join-rate view above.</p>
+          <p style="margin:0 0 14px;color:var(--text-dim);">How we size, rotate, and prune the catalog — so keep/kill is policy, not a gut call. The signals behind it are in the per-study table above.</p>
           <div style="margin-bottom:12px;"><strong style="color:var(--text);">1 · How many run at once — <span style="color:var(--lime);">TBD</span>.</strong> Today ~14&ndash;15. Direction: <strong style="color:var(--text);">fewer</strong> &mdash; a smaller rotating set creates scarcity &amp; newness. The exact number is set by the join-rate data, not guessed; interim, lean fewer and retire the clearly-dead first.</div>
           <div style="margin-bottom:12px;"><strong style="color:var(--text);">2 · Rotation &mdash; ~every 3 months.</strong> Retire a few, add a few, cycle the catalog. <em>Exception:</em> a study clearly performing (strong, sustained join rate) stays &mdash; don&rsquo;t retire a winner on a calendar.</div>
           <div style="margin-bottom:12px;"><strong style="color:var(--text);">3 · Keep or kill = interest.</strong> The one retire lever is <strong style="color:var(--text);">recent joins</strong> (people <em>starting</em> the study), on a 7- &amp; 30-day window. If joins collapse over a 1&ndash;2 week window &rarr; <span style="color:#FB7185;font-weight:600;">retirement candidate</span>. Completion and compliance never retire a study.</div>
@@ -1028,31 +1059,6 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
       </div>
     </div>
 
-    <div class="ps-section">
-      <div class="ps-section-title">Per-Study Detail</div>
-      <div class="ps-chart-card" style="padding:0;overflow-x:auto;">
-        <table class="ps-table" id="ps-detail-table">
-          <thead>
-            <tr>
-              <th data-col="name">Study</th>
-              <th data-col="category">Category</th>
-              <th data-col="status">Status</th>
-              <th data-col="health">Health</th>
-              <th data-col="participants" class="num">Participants</th>
-              <th data-col="new" class="num">New</th>
-              <th data-col="returning" class="num">Returning</th>
-              <th data-col="completed" class="num">Completed</th>
-              <th data-col="completionRate" class="num">Completion %</th>
-              <th data-col="runRate30d" class="num">Run-rate 30d</th>
-              <th data-col="avgDaysTagged" class="num">Avg Days Tagged</th>
-              <th data-col="avgDaysMissed" class="num">Avg Days Missed</th>
-              <th data-col="launchDate">Launch</th>
-            </tr>
-          </thead>
-          <tbody id="ps-detail-tbody"></tbody>
-        </table>
-      </div>
-    </div>
   </div><!-- /#tab-public-studies -->
 
   <div class="footer" id="footer"></div>
@@ -5159,14 +5165,20 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { key: 'name', label: 'Study' },
     { key: 'category', label: 'Category' },
     { key: 'status', label: 'Status' },
+    { key: 'retire', label: 'Retire?' },
+    { key: 'health', label: 'Health' },
     { key: 'participants', label: 'Participants' },
-    { key: 'age', label: 'Age' },
+    { key: 'new', label: 'New' },
+    { key: 'returning', label: 'Returning' },
+    { key: 'completed', label: 'Completed' },
+    { key: 'completionRate', label: 'Completion %' },
+    { key: 'compliance', label: 'Compliance' },
     { key: 'joins7d', label: 'Joins · 7d' },
     { key: 'joins30d', label: 'Joins · 30d' },
     { key: 'joins90d', label: 'Joins · 90d' },
     { key: 'lastJoin', label: 'Last join' },
-    { key: 'compliance', label: 'Compliance' },
-    { key: 'retire', label: 'Retire?' },
+    { key: 'age', label: 'Age' },
+    { key: 'launchDate', label: 'Launch' },
   ];
 
   function psRenderJoinRate() {
@@ -5181,8 +5193,9 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const retire = cat.key === 'live'
         && (catDays != null && catDays >= RETIRE_MIN_CATALOG_DAYS)
         && psDecliningTrend(s, baseYm);
-      return { s, cat, joins7d: m.joins7d, joins30d: m.joins30d, joins90d: m.joins90d, lastJoinMonth: m.lastJoinMonth, retire,
-        participants: psParticipantsFor(s), ageDays: catDays, compl: psComplianceFor(s) };
+      const isLive = cat.key === 'live';
+      return { s, cat, isLive, joins7d: m.joins7d, joins30d: m.joins30d, joins90d: m.joins90d, lastJoinMonth: m.lastJoinMonth, retire,
+        participants: psParticipantsFor(s), ageDays: catDays, compl: psComplianceFor(s), health: isLive ? psHealth(s) : null };
     });
 
     const dir = psJrSortDir === 'asc' ? 1 : -1;
@@ -5199,6 +5212,12 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         case 'joins90d': return r.joins90d;
         case 'lastJoin': return r.lastJoinMonth || '0000-00';
         case 'retire':   return r.retire ? 1 : 0;
+        case 'health':         return r.health ? r.health.score : -1;
+        case 'new':            return Number(r.s.new) || 0;
+        case 'returning':      return Number(r.s.returning) || 0;
+        case 'completed':      return Number(r.s.completed) || 0;
+        case 'completionRate': return Number(r.s.completionRate) || 0;
+        case 'launchDate':     return r.s.launchDate ? Date.parse(r.s.launchDate) : -Infinity;
         default:         return 0;
       }
     };
@@ -5216,35 +5235,49 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
 
     const body = rows.map(r => {
       const off = r.cat.key !== 'live';
+      const s = r.s;
       const retireCell = r.retire
         ? '<span style="color:#FB7185;font-weight:700;white-space:nowrap;">● Retire?</span>'
         : (r.cat.key === 'live' ? '<span style="color:#34D399;">keep</span>' : '<span style="color:var(--text-dim);">—</span>');
+      const h = r.health;
+      const healthCell = h
+        ? `<span style="color:${h.color};font-weight:600;white-space:nowrap;">● ${h.label}</span>`
+        : '<span style="color:var(--text-dim);">—</span>';
       const partCell = r.participants == null ? '<span style="color:var(--text-dim);">—</span>' : `<span style="font-weight:600;">${fmtInt(r.participants)}</span>`;
       const ageCell = r.ageDays == null ? '<span style="color:var(--text-dim);">—</span>' : `<span style="font-weight:600;">${fmtInt(r.ageDays)}</span> <span style="color:var(--text-dim);">d</span>`;
       const cp = r.compl ? r.compl.pct : null;
       const complCell = r.compl
         ? `<span style="font-weight:600;color:${cp >= 90 ? 'var(--green)' : cp >= 70 ? 'var(--yellow)' : 'var(--rose)'};white-space:nowrap;">${cp.toFixed(0)}%</span> <span style="color:var(--text-dim);white-space:nowrap;"> ${r.compl.tagged.toFixed(1)}/${(r.compl.tagged + r.compl.missed).toFixed(1)}d</span>`
         : '<span style="color:var(--text-dim);">—</span>';
-      const catLbl = r.s.category === 'FitnessAndActivity' ? 'Fitness & Activity' : (r.s.category || '—');
+      const ratePct = s.completionRate > 0 ? Number(s.completionRate).toFixed(2) + '%' : '—';
+      const rateColor = s.completionRate >= 70 ? 'var(--green)' : s.completionRate >= 50 ? 'var(--lime)' : s.completionRate > 0 ? 'var(--yellow)' : 'var(--text-dim)';
+      const catLbl = s.category === 'FitnessAndActivity' ? 'Fitness & Activity' : (s.category || '—');
+      const launch = s.launchDate ? psFmtDate(s.launchDate) : '—';
       return `<tr${off ? ' style="opacity:0.55;"' : ''}>
-        <td>${esc(r.s.name)}</td>
-        <td><span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><span style="width:8px;height:8px;border-radius:50%;background:${psCategoryColor(r.s.category)};flex-shrink:0;"></span>${esc(catLbl)}</span></td>
+        <td title="${esc(s.name)}">${esc(s.name)}</td>
+        <td><span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><span style="width:8px;height:8px;border-radius:50%;background:${psCategoryColor(s.category)};flex-shrink:0;"></span>${esc(catLbl)}</span></td>
         <td><span style="color:${r.cat.color};font-weight:600;white-space:nowrap;">${r.cat.dot} ${r.cat.label}</span></td>
+        <td>${retireCell}</td>
+        <td>${healthCell}</td>
         <td class="num">${partCell}</td>
-        <td class="num">${ageCell}</td>
+        <td class="num">${fmtInt(Number(s.new) || 0)}</td>
+        <td class="num">${fmtInt(Number(s.returning) || 0)}</td>
+        <td class="num">${fmtInt(Number(s.completed) || 0)}</td>
+        <td class="num" style="color:${rateColor};font-weight:600;white-space:nowrap;">${ratePct}</td>
+        <td>${complCell}</td>
         <td class="num">${num(r.joins7d)}</td>
         <td class="num">${num(r.joins30d)}</td>
         <td class="num" style="font-weight:700;color:${r.retire ? '#FB7185' : 'var(--text)'};">${fmtInt(r.joins90d)}</td>
         <td style="white-space:nowrap;">${psFmtMonth(r.lastJoinMonth)}</td>
-        <td>${complCell}</td>
-        <td>${retireCell}</td>
+        <td class="num">${ageCell}</td>
+        <td style="white-space:nowrap;">${launch}</td>
       </tr>`;
     }).join('');
 
     host.innerHTML = `
       <div style="padding:14px 18px 2px;font-size:12px;color:var(--text-dim);line-height:1.6;">
         A study is a retire candidate only when it&rsquo;s <strong style="color:var(--text-secondary);">mature and losing steam</strong> — on the catalog &ge; 3 months <em>and</em> its joins are continuously declining — judged on <strong style="color:var(--text-secondary);">joins (starts)</strong>, never completion or compliance (<a href="https://github.com/akamoore/command_center/blob/main/docs/public-study-catalog-rules.md" target="_blank" rel="noopener" style="color:var(--lime);">catalog rules</a>).
-        <strong style="color:var(--text);">7d</strong> from <code style="color:var(--text-secondary);">/api/recruiting?days=7</code>, <strong style="color:var(--text);">30d</strong> from <code style="color:var(--text-secondary);">runRate30d</code>, <strong style="color:var(--text);">90d</strong> = trailing 3 months of <code style="color:var(--text-secondary);">joinsByMonth</code>. Last-join is month-level — the feed exposes no day-precise timestamp. <strong style="color:var(--text);">Participants / Age / Compliance</strong> are shown for context (same as the study list) and <em>don&rsquo;t</em> affect the keep-or-kill call.
+        <strong style="color:var(--text);">7d</strong> from <code style="color:var(--text-secondary);">/api/recruiting?days=7</code>, <strong style="color:var(--text);">30d</strong> from <code style="color:var(--text-secondary);">runRate30d</code>, <strong style="color:var(--text);">90d</strong> = trailing 3 months of <code style="color:var(--text-secondary);">joinsByMonth</code>. Last-join is month-level — the feed exposes no day-precise timestamp. <strong style="color:var(--text);">Participants / Age / Compliance</strong> are shown for context and <em>don&rsquo;t</em> affect the keep-or-kill call.
       </div>
       <div style="padding:8px 18px 14px;">
         <div style="display:inline-flex;gap:14px;flex-wrap:wrap;align-items:center;background:rgba(251,113,133,0.08);border:1px solid rgba(251,113,133,0.25);border-radius:10px;padding:10px 14px;font-size:12px;">
@@ -5258,6 +5291,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       <table class="ps-table" id="ps-joinrate-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
   }
 
+  // UNUSED since the tables were merged — retained only as reference; not called anywhere.
   function psRenderTable() {
     const studies = psModel.studies.slice().sort((a, b) => {
       if (psSortCol === 'status') {
@@ -5396,7 +5430,6 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const geoChart = Object.keys(psModel.geo).length <= 6 ? psDoughnut : psBar;
       psCharts.geo = geoChart('#ps-chart-geo', psModel.geo);
       psCharts.wearables = psDoughnut('#ps-chart-wearables', psModel.wearables);
-      psRenderTable();
       psRenderedSource = model.source;
     } finally {
       psLoading = false;
@@ -5428,15 +5461,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     psRenderJoinRate();
   });
 
-  // Per-study detail table sorting
-  document.getElementById('ps-detail-table').addEventListener('click', e => {
-    const th = e.target.closest('th[data-col]');
-    if (!th) return;
-    const col = th.dataset.col;
-    if (psSortCol === col) psSortDir = psSortDir === 'asc' ? 'desc' : 'asc';
-    else { psSortCol = col; psSortDir = (col === 'name' || col === 'category') ? 'asc' : 'desc'; }
-    psRenderTable();
-  });
+  // The per-study detail table + its sort handler were merged into the combined
+  // keep-or-kill table above, which owns sorting via th[data-jrcol].
 
 })();
 </script>
