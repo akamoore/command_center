@@ -5140,10 +5140,13 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   const psJrColumns = [
     { key: 'name', label: 'Study' },
     { key: 'status', label: 'Status' },
+    { key: 'participants', label: 'Participants' },
+    { key: 'age', label: 'Age' },
     { key: 'joins7d', label: 'Joins · 7d' },
     { key: 'joins30d', label: 'Joins · 30d' },
     { key: 'joins90d', label: 'Joins · 90d' },
     { key: 'lastJoin', label: 'Last join' },
+    { key: 'compliance', label: 'Compliance' },
     { key: 'retire', label: 'Retire?' },
   ];
 
@@ -5156,7 +5159,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const cat = catalogStatus(s);
       const m = psJoinMetrics(s, baseYm);
       const retire = cat.key === 'live' && (m.joins90d || 0) < RETIRE_IF_JOINS_90D_BELOW;
-      return { s, cat, joins7d: m.joins7d, joins30d: m.joins30d, joins90d: m.joins90d, lastJoinMonth: m.lastJoinMonth, retire };
+      return { s, cat, joins7d: m.joins7d, joins30d: m.joins30d, joins90d: m.joins90d, lastJoinMonth: m.lastJoinMonth, retire,
+        participants: psParticipantsFor(s), ageDays: catalogDaysFor(s), compl: psComplianceFor(s) };
     });
 
     const dir = psJrSortDir === 'asc' ? 1 : -1;
@@ -5164,6 +5168,9 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       switch (psJrSortCol) {
         case 'name':     return r.s.name || '';
         case 'status':   return r.cat.label || '';
+        case 'participants': return r.participants == null ? -1 : r.participants;
+        case 'age':          return r.ageDays == null ? -1 : r.ageDays;
+        case 'compliance':   return r.compl ? r.compl.pct : -1;
         case 'joins7d':  return r.joins7d == null ? -1 : r.joins7d;
         case 'joins30d': return r.joins30d == null ? -1 : r.joins30d;
         case 'joins90d': return r.joins90d;
@@ -5190,13 +5197,22 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const retireCell = r.retire
         ? '<span style="color:#FB7185;font-weight:700;white-space:nowrap;">● Retire?</span>'
         : (r.cat.key === 'live' ? '<span style="color:#34D399;">keep</span>' : '<span style="color:var(--text-dim);">—</span>');
+      const partCell = r.participants == null ? '<span style="color:var(--text-dim);">—</span>' : `<span style="font-weight:600;">${fmtInt(r.participants)}</span>`;
+      const ageCell = r.ageDays == null ? '<span style="color:var(--text-dim);">—</span>' : `<span style="font-weight:600;">${fmtInt(r.ageDays)}</span> <span style="color:var(--text-dim);">d</span>`;
+      const cp = r.compl ? r.compl.pct : null;
+      const complCell = r.compl
+        ? `<span style="font-weight:600;color:${cp >= 90 ? 'var(--green)' : cp >= 70 ? 'var(--yellow)' : 'var(--rose)'};white-space:nowrap;">${cp.toFixed(0)}%</span> <span style="color:var(--text-dim);white-space:nowrap;"> ${r.compl.tagged.toFixed(1)}/${(r.compl.tagged + r.compl.missed).toFixed(1)}d</span>`
+        : '<span style="color:var(--text-dim);">—</span>';
       return `<tr${off ? ' style="opacity:0.55;"' : ''}>
         <td>${esc(r.s.name)}</td>
         <td><span style="color:${r.cat.color};font-weight:600;white-space:nowrap;">${r.cat.dot} ${r.cat.label}</span></td>
+        <td class="num">${partCell}</td>
+        <td class="num">${ageCell}</td>
         <td class="num">${num(r.joins7d)}</td>
         <td class="num">${num(r.joins30d)}</td>
         <td class="num" style="font-weight:700;color:${(r.joins90d || 0) < RETIRE_IF_JOINS_90D_BELOW && r.cat.key === 'live' ? '#FB7185' : 'var(--text)'};">${fmtInt(r.joins90d)}</td>
         <td style="white-space:nowrap;">${psFmtMonth(r.lastJoinMonth)}</td>
+        <td>${complCell}</td>
         <td>${retireCell}</td>
       </tr>`;
     }).join('');
@@ -5204,7 +5220,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     host.innerHTML = `
       <div style="padding:14px 18px 2px;font-size:12px;color:var(--text-dim);line-height:1.6;">
         Keep-or-kill is judged on <strong style="color:var(--text-secondary);">recent joins (starts)</strong> — never completion or compliance (<a href="https://github.com/akamoore/command_center/blob/main/docs/public-study-catalog-rules.md" target="_blank" rel="noopener" style="color:var(--lime);">catalog rules</a>).
-        <strong style="color:var(--text);">7d</strong> from <code style="color:var(--text-secondary);">/api/recruiting?days=7</code>, <strong style="color:var(--text);">30d</strong> from <code style="color:var(--text-secondary);">runRate30d</code>, <strong style="color:var(--text);">90d</strong> = trailing 3 months of <code style="color:var(--text-secondary);">joinsByMonth</code>. Last-join is month-level — the feed exposes no day-precise timestamp.
+        <strong style="color:var(--text);">7d</strong> from <code style="color:var(--text-secondary);">/api/recruiting?days=7</code>, <strong style="color:var(--text);">30d</strong> from <code style="color:var(--text-secondary);">runRate30d</code>, <strong style="color:var(--text);">90d</strong> = trailing 3 months of <code style="color:var(--text-secondary);">joinsByMonth</code>. Last-join is month-level — the feed exposes no day-precise timestamp. <strong style="color:var(--text);">Participants / Age / Compliance</strong> are shown for context (same as the study list) and <em>don&rsquo;t</em> affect the keep-or-kill call.
       </div>
       <div style="padding:8px 18px 14px;">
         <div style="display:inline-flex;gap:14px;flex-wrap:wrap;align-items:center;background:rgba(251,113,133,0.08);border:1px solid rgba(251,113,133,0.25);border-radius:10px;padding:10px 14px;font-size:12px;">
