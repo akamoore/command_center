@@ -2909,7 +2909,17 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const sorted = sortCol === c.key;
       const arrow = sorted ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
       const cls = [c.align === 'right' ? 'align-right' : '', sorted ? 'sorted' : ''].filter(Boolean).join(' ');
-      return `<th class="${cls}" data-col="${c.key}" ${c.sortable ? '' : 'style="cursor:default"'}>${c.label}${c.sortable ? `<span class="sort-arrow">${arrow}</span>` : ''}</th>`;
+      // Onboarded comes from the recruiting feed, windowed by the active time filter — it's a
+      // recent cohort, NOT the all-time total (an old study can read 13 for its last 30 days
+      // against a lifetime 100). Label it with the current window so it can't be misread, and
+      // reflect the real window: the "all"/year buttons collapse to 30d at the proxy.
+      let label = c.label, titleAttr = '';
+      if (c.key === 'onboarded') {
+        const win = Number.isFinite(selectedDays) ? selectedDays : 30;
+        label = `Onboarded &middot; ${win}d`;
+        titleAttr = ' title="Onboarded within the selected recruiting window, not the all-time total — a true per-study lifetime onboarded is pending an ops API field. Completed studies show their final count."';
+      }
+      return `<th class="${cls}" data-col="${c.key}"${titleAttr} ${c.sortable ? '' : 'style="cursor:default"'}>${label}${c.sortable ? `<span class="sort-arrow">${arrow}</span>` : ''}</th>`;
     }).join('');
 
     // Filter studies
