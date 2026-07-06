@@ -3910,6 +3910,23 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return (hit && hit.participants != null) ? Number(hit.participants) : null;
   }
 
+  // Per-study ONBOARDED count (finished onboarding / completed baseline) from the recruiting
+  // feed's onboarding.byStudy — the SAME source the Study-by-Study Breakdown uses. Matched by
+  // id, then name. This tracks the recruiting cohort, so it lines up with the recent join
+  // counts, not necessarily the lifetime Participants total (a different feed). Null if unmatched.
+  function psOnboardedFor(study) {
+    const by = (apiData && apiData.onboarding && Array.isArray(apiData.onboarding.byStudy)) ? apiData.onboarding.byStudy : null;
+    if (!by || !study) return null;
+    let hit = study.id != null ? by.find(e => e && e.experimentId != null && String(e.experimentId) === String(study.id)) : null;
+    if (!hit && study.name) {
+      const nm = String(study.name).trim().toLowerCase();
+      hit = by.find(e => String((e && (e.studyName || e.experimentTitle || e.name)) || '').trim().toLowerCase() === nm);
+    }
+    if (!hit) return null;
+    const v = hit.onboarded ?? hit.count;
+    return v == null ? null : Number(v);
+  }
+
   // Per-study wearable breakdown (real device counts) from the live /api/demographics
   // per-study marginals — matched to the study by id, then by name (same pattern as
   // psApiRowFor / the Gap view). Consolidates device-name variants (Whoop/Whoop V2,
@@ -5247,6 +5264,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { key: 'retire', label: 'Retire?' },
     { key: 'health', label: 'Health' },
     { key: 'participants', label: 'Participants' },
+    { key: 'onboarded', label: 'Onboarded' },
     { key: 'wearables', label: 'Wearables' },
     { key: 'new', label: 'New' },
     { key: 'returning', label: 'Returning' },
@@ -5276,7 +5294,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const isLive = cat.key === 'live';
       return { s, cat, isLive, joins7d: m.joins7d, joins30d: m.joins30d, joins90d: m.joins90d, lastJoinMonth: m.lastJoinMonth, retire,
         participants: psParticipantsFor(s), ageDays: catDays, compl: psComplianceFor(s), health: isLive ? psHealth(s) : null,
-        wearables: psWearablesForStudy(s) };
+        wearables: psWearablesForStudy(s), onboarded: psOnboardedFor(s) };
     });
 
     const dir = psJrSortDir === 'asc' ? 1 : -1;
@@ -5286,6 +5304,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         case 'category': return r.s.category || '';
         case 'status':   return r.cat.label || '';
         case 'participants': return r.participants == null ? -1 : r.participants;
+        case 'onboarded':    return r.onboarded == null ? -1 : r.onboarded;
         case 'wearables':    return r.wearables ? Object.values(r.wearables).reduce((a, b) => a + b, 0) : -1;
         case 'age':          return r.ageDays == null ? -1 : r.ageDays;
         case 'compliance':   return r.compl ? r.compl.pct : -1;
@@ -5352,6 +5371,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         <td>${retireCell}</td>
         <td>${healthCell}</td>
         <td class="num">${partCell}</td>
+        <td class="num">${r.onboarded == null ? '<span style="color:var(--text-dim);">—</span>' : `<span style="font-weight:600;color:var(--teal);">${fmtInt(r.onboarded)}</span>`}</td>
         <td>${wearCell}</td>
         <td class="num">${fmtInt(Number(s.new) || 0)}</td>
         <td class="num">${fmtInt(Number(s.returning) || 0)}</td>
