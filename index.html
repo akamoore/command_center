@@ -4367,7 +4367,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     }
 
     const note = scope === 'all'
-      ? 'Whole participant base — Public + Clinical + Self-Serve. The headline count is <em>distinct people</em> — <strong style="color:var(--text-secondary);">&ldquo;distinct&rdquo; means each person is counted only once in the database</strong>, no matter how many studies they joined; the bars below count <em>study-join events</em> (a person counts once per study they joined).'
+      ? 'Whole participant base — Public + Clinical + Self-Serve. The headline count is <em>distinct people</em> — <strong style="color:var(--text-secondary);">&ldquo;distinct&rdquo; means each person is counted only once in the database</strong>, no matter how many studies they joined; the bars below count <em>study-join events</em> (a person counts once per study they joined). Note: the <em>study-join events</em> total still includes some internal <em>test</em> accounts, so it runs slightly high — the funnel below counts <em>non-tester</em> (real participant) accounts only.'
       : scope === 'public'
       ? 'Public / community challenges only. Bars count <em>study-join events</em> (a person counts once per study they joined).'
       : 'Single study — bars show this study&rsquo;s own participant mix.';
@@ -4423,7 +4423,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         ${rung('Joined &ge;1 study', joinedAny, 'var(--teal)', neverJoined, 'signed up, never joined a study')}
         ${rung('Joined an in-scope study <span style="color:var(--text-dim);font-weight:400;">(= distinct participants)</span>', joinedInScope, 'var(--lime)', null, '')}
         ${rung('Onboarded <span style="color:var(--text-dim);font-weight:400;">(finished the 6 steps)</span>', onboarded, 'var(--lime)', neverOnboarded, 'joined but never onboarded')}
-        <div style="font-size:11px;color:var(--text-dim);margin-top:10px;line-height:1.55;">Each rung is a subset of the one above; <strong style="color:var(--text-secondary);">joined in-scope</strong> reconciles with the distinct-participant count. Live from <code style="color:var(--text-secondary);">/api/demographics</code>.</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:10px;line-height:1.55;"><strong style="color:var(--text-secondary);">Non-tester</strong> = a real participant account (internal test / QA accounts are excluded). Each rung is a subset of the one above; <strong style="color:var(--text-secondary);">joined in-scope</strong> reconciles with the distinct-participant count. Live from <code style="color:var(--text-secondary);">/api/demographics</code>.</div>
       </div>`;
     })() : '';
 
