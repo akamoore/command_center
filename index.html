@@ -4367,7 +4367,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     }
 
     const note = scope === 'all'
-      ? 'Whole participant base — Public + Clinical + Self-Serve. The headline count is <em>distinct people</em>; the bars below count <em>study-join events</em> (a person counts once per study they joined).'
+      ? 'Whole participant base — Public + Clinical + Self-Serve. The headline count is <em>distinct people</em> — <strong style="color:var(--text-secondary);">&ldquo;distinct&rdquo; means each person is counted only once in the database</strong>, no matter how many studies they joined; the bars below count <em>study-join events</em> (a person counts once per study they joined).'
       : scope === 'public'
       ? 'Public / community challenges only. Bars count <em>study-join events</em> (a person counts once per study they joined).'
       : 'Single study — bars show this study&rsquo;s own participant mix.';
