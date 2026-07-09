@@ -2879,6 +2879,19 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return (spend > 0 && onb > 0) ? spend / onb : null;
   }
 
+  // Paid CPO = ad spend ÷ paid leads (participants who came through ads only). Unlike the
+  // blended CPO above (getCPO, which divides by ALL onboarded), this isolates true paid
+  // acquisition cost — the right denominator for a public study whose joins mix organic + paid.
+  // The per-study paid-lead count comes from an integration that's still being wired up, so
+  // this returns null for now and the column shows a "pending" placeholder. When the field
+  // lands, set `paidLeads` from it (one line) and the column fills in automatically.
+  function psPaidCpoFor(s) {
+    const paidLeads = null; // TODO: read the ads-sourced lead count once the integration lands
+    if (paidLeads == null || paidLeads <= 0) return null;
+    const spend = studySpend(s);
+    return spend > 0 ? spend / paidLeads : null;
+  }
+
   function getSortValue(s, col) {
     if (col === 'spend') return (s.apiSpend != null ? s.apiSpend : s.spend) || 0;
     if (col === 'cpo') return getCPO(s) ?? 999999;
@@ -4112,12 +4125,15 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
               const spendCell = spendVal > 0 ? fmt(spendVal) : '<span style="color:var(--text-dim);">—</span>';
               const cpoVal = getCPO(s);
               const cpoCell = cpoVal != null ? fmt(cpoVal) : '<span style="color:var(--text-dim);">—</span>';
+              const paidCpoVal = psPaidCpoFor(s);
+              const paidCpoCell = paidCpoVal != null ? fmt(paidCpoVal) : '<span style="color:var(--text-dim);font-style:italic;" title="Ad spend ÷ paid (ads-sourced) leads — pending the paid-leads integration">pending</span>';
               return `<tr${offCatalog ? ' style="opacity:0.5;"' : ''}>
                 <td>${esc(s.name)}</td>
                 <td>${partCell}</td>
                 <td>${recCell}</td>
                 <td class="num">${spendCell}</td>
                 <td class="num">${cpoCell}</td>
+                <td class="num">${paidCpoCell}</td>
                 <td class="num">${ageCell}</td>
                 <td class="num">${jcell(jm.j7)}</td>
                 <td class="num">${jcellWin(jm.j14, 14)}</td>
@@ -4150,7 +4166,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { key: 'participants', label: 'Participants' },
     { key: 'recruited', label: 'Recruited' },
     { key: 'spend', label: 'Ad Spend' },
-    { key: 'cpo', label: 'CPO' },
+    { key: 'cpo', label: 'Blended CPO' },
+    { key: 'paidCpo', label: 'Paid CPO' },
     { key: 'age', label: 'Age' },
     { key: 'joins7d', label: 'Joins · 7d' },
     { key: 'joins14d', label: 'Joins · 14d' },
@@ -4200,6 +4217,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       case 'recruited': return s.joined ?? -1;
       case 'spend': return studySpend(s);
       case 'cpo': return getCPO(s) ?? 999999;
+      case 'paidCpo': { const v = psPaidCpoFor(s); return v == null ? 999999 : v; }
       case 'age': return catalogDaysFor(s) ?? -1;
       case 'joins7d': { const j = commJoinsFor(s); return j.j7 == null ? -1 : j.j7; }
       case 'joins14d': { const d = catalogDaysFor(s); if (d != null && d < 14) return -1; const j = commJoinsFor(s); return j.j14 == null ? -1 : j.j14; }
@@ -5272,7 +5290,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { key: 'health', label: 'Health' },
     { key: 'participants', label: 'Participants' },
     { key: 'spend', label: 'Ad Spend' },
-    { key: 'cpo', label: 'CPO' },
+    { key: 'cpo', label: 'Blended CPO' },
+    { key: 'paidCpo', label: 'Paid CPO' },
     { key: 'wearables', label: 'Wearables' },
     { key: 'new', label: 'New' },
     { key: 'returning', label: 'Returning' },
@@ -5301,7 +5320,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     const psSpendCpoFor = (s) => {
       let e = s.id != null ? psEnrById[String(s.id)] : null;
       if (!e && s.name) e = psEnrByName[String(s.name).trim().toLowerCase()];
-      return { spend: e ? studySpend(e) : 0, cpo: e ? getCPO(e) : null };
+      return { spend: e ? studySpend(e) : 0, cpo: e ? getCPO(e) : null, paidCpo: e ? psPaidCpoFor(e) : null };
     };
     const rows = (psModel.studies || []).map(s => {
       const cat = catalogStatus(s);
@@ -5314,7 +5333,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       const sc = psSpendCpoFor(s);
       return { s, cat, isLive, joins7d: m.joins7d, joins30d: m.joins30d, joins90d: m.joins90d, lastJoinMonth: m.lastJoinMonth, retire,
         participants: psParticipantsFor(s), ageDays: catDays, compl: psComplianceFor(s), health: isLive ? psHealth(s) : null,
-        wearables: psWearablesForStudy(s), spendVal: sc.spend, cpoVal: sc.cpo };
+        wearables: psWearablesForStudy(s), spendVal: sc.spend, cpoVal: sc.cpo, paidCpoVal: sc.paidCpo };
     });
 
     const dir = psJrSortDir === 'asc' ? 1 : -1;
@@ -5326,6 +5345,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         case 'participants': return r.participants == null ? -1 : r.participants;
         case 'spend':        return r.spendVal || 0;
         case 'cpo':          return r.cpoVal == null ? 999999 : r.cpoVal;
+        case 'paidCpo':      return r.paidCpoVal == null ? 999999 : r.paidCpoVal;
         case 'wearables':    return r.wearables ? Object.values(r.wearables).reduce((a, b) => a + b, 0) : -1;
         case 'age':          return r.ageDays == null ? -1 : r.ageDays;
         case 'compliance':   return r.compl ? r.compl.pct : -1;
@@ -5394,6 +5414,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         <td class="num">${partCell}</td>
         <td class="num">${r.spendVal > 0 ? fmt(r.spendVal) : '<span style="color:var(--text-dim);">—</span>'}</td>
         <td class="num">${r.cpoVal != null ? fmt(r.cpoVal) : '<span style="color:var(--text-dim);">—</span>'}</td>
+        <td class="num">${r.paidCpoVal != null ? fmt(r.paidCpoVal) : '<span style="color:var(--text-dim);font-style:italic;" title="Ad spend ÷ paid (ads-sourced) leads — pending the paid-leads integration">pending</span>'}</td>
         <td>${wearCell}</td>
         <td class="num">${fmtInt(Number(s.new) || 0)}</td>
         <td class="num">${fmtInt(Number(s.returning) || 0)}</td>
