@@ -2879,14 +2879,25 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     return (spend > 0 && onb > 0) ? spend / onb : null;
   }
 
-  // Paid CPO = ad spend ÷ paid leads (participants who came through ads only). Unlike the
-  // blended CPO above (getCPO, which divides by ALL onboarded), this isolates true paid
-  // acquisition cost — the right denominator for a public study whose joins mix organic + paid.
-  // The per-study paid-lead count comes from an integration that's still being wired up, so
-  // this returns null for now and the column shows a "pending" placeholder. When the field
-  // lands, set `paidLeads` from it (one line) and the column fills in automatically.
+  // Paid leads per study — count of real (non-test) Meta Lead Ads form submissions, used as the
+  // Paid CPO denominator. Only the COUNT lives here; participant PII stays in the source signup
+  // sheet. Snapshot as of 2026-07-09 (Summer Shred signups form: 12 real leads, 1 test lead
+  // excluded). Refresh the number as the form grows, or wire the Lovable integration to write it.
+  const PS_PAID_LEADS = {
+    'Summer Shred': 12,
+  };
+
+  // Paid CPO = ad spend ÷ paid leads (people who came through the ad form) — NOT ÷ all onboarded
+  // like the blended CPO (getCPO). For a public study whose joins mix organic + paid, this
+  // isolates true paid acquisition cost. Returns null (cell shows "—") for studies with no paid
+  // form or no ad spend.
   function psPaidCpoFor(s) {
-    const paidLeads = null; // TODO: read the ads-sourced lead count once the integration lands
+    if (!s || !s.name) return null;
+    let paidLeads = PS_PAID_LEADS[s.name];
+    if (paidLeads == null) {
+      const nm = String(s.name).trim().toLowerCase();
+      for (const k in PS_PAID_LEADS) { if (k.trim().toLowerCase() === nm) { paidLeads = PS_PAID_LEADS[k]; break; } }
+    }
     if (paidLeads == null || paidLeads <= 0) return null;
     const spend = studySpend(s);
     return spend > 0 ? spend / paidLeads : null;
@@ -4126,7 +4137,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
               const cpoVal = getCPO(s);
               const cpoCell = cpoVal != null ? fmt(cpoVal) : '<span style="color:var(--text-dim);">—</span>';
               const paidCpoVal = psPaidCpoFor(s);
-              const paidCpoCell = paidCpoVal != null ? fmt(paidCpoVal) : '<span style="color:var(--text-dim);font-style:italic;" title="Ad spend ÷ paid (ads-sourced) leads — pending the paid-leads integration">pending</span>';
+              const paidCpoCell = paidCpoVal != null ? fmt(paidCpoVal) : '<span style="color:var(--text-dim);">—</span>';
               return `<tr${offCatalog ? ' style="opacity:0.5;"' : ''}>
                 <td>${esc(s.name)}</td>
                 <td>${partCell}</td>
@@ -5414,7 +5425,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         <td class="num">${partCell}</td>
         <td class="num">${r.spendVal > 0 ? fmt(r.spendVal) : '<span style="color:var(--text-dim);">—</span>'}</td>
         <td class="num">${r.cpoVal != null ? fmt(r.cpoVal) : '<span style="color:var(--text-dim);">—</span>'}</td>
-        <td class="num">${r.paidCpoVal != null ? fmt(r.paidCpoVal) : '<span style="color:var(--text-dim);font-style:italic;" title="Ad spend ÷ paid (ads-sourced) leads — pending the paid-leads integration">pending</span>'}</td>
+        <td class="num">${r.paidCpoVal != null ? fmt(r.paidCpoVal) : '<span style="color:var(--text-dim);">—</span>'}</td>
         <td>${wearCell}</td>
         <td class="num">${fmtInt(Number(s.new) || 0)}</td>
         <td class="num">${fmtInt(Number(s.returning) || 0)}</td>
