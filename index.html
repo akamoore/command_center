@@ -4104,10 +4104,18 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
               const partCell = participants != null
                 ? `<span style="font-weight:600;">${fmtInt(participants)}</span>`
                 : '<span style="color:var(--text-dim);">—</span>';
+              // Ad spend (Meta, attributed via CAMPAIGN_TO_STUDY) and CPO (spend ÷ onboarded).
+              // Organic community challenges with no mapped campaign read "—".
+              const spendVal = studySpend(s);
+              const spendCell = spendVal > 0 ? fmt(spendVal) : '<span style="color:var(--text-dim);">—</span>';
+              const cpoVal = getCPO(s);
+              const cpoCell = cpoVal != null ? fmt(cpoVal) : '<span style="color:var(--text-dim);">—</span>';
               return `<tr${offCatalog ? ' style="opacity:0.5;"' : ''}>
                 <td>${esc(s.name)}</td>
                 <td>${partCell}</td>
                 <td>${recCell}</td>
+                <td class="num">${spendCell}</td>
+                <td class="num">${cpoCell}</td>
                 <td class="num">${ageCell}</td>
                 <td class="num">${jcell(jm.j7)}</td>
                 <td class="num">${jcellWin(jm.j14, 14)}</td>
@@ -4139,6 +4147,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { key: 'name', label: 'Study Name' },
     { key: 'participants', label: 'Participants' },
     { key: 'recruited', label: 'Recruited' },
+    { key: 'spend', label: 'Ad Spend' },
+    { key: 'cpo', label: 'CPO' },
     { key: 'age', label: 'Age' },
     { key: 'joins7d', label: 'Joins · 7d' },
     { key: 'joins14d', label: 'Joins · 14d' },
@@ -4186,6 +4196,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       case 'name': return (s.name || '').toLowerCase();
       case 'participants': return psParticipantsFor(s) ?? -1;
       case 'recruited': return s.joined ?? -1;
+      case 'spend': return studySpend(s);
+      case 'cpo': return getCPO(s) ?? 999999;
       case 'age': return catalogDaysFor(s) ?? -1;
       case 'joins7d': { const j = commJoinsFor(s); return j.j7 == null ? -1 : j.j7; }
       case 'joins14d': { const d = catalogDaysFor(s); if (d != null && d < 14) return -1; const j = commJoinsFor(s); return j.j14 == null ? -1 : j.j14; }
@@ -5257,6 +5269,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     { key: 'retire', label: 'Retire?' },
     { key: 'health', label: 'Health' },
     { key: 'participants', label: 'Participants' },
+    { key: 'spend', label: 'Ad Spend' },
+    { key: 'cpo', label: 'CPO' },
     { key: 'wearables', label: 'Wearables' },
     { key: 'new', label: 'New' },
     { key: 'returning', label: 'Returning' },
@@ -5276,6 +5290,17 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     if (!host || !psModel) return;
     const now = new Date();
     const baseYm = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    // Ad spend / CPO live on the enriched studies (Meta spend via CAMPAIGN_TO_STUDY), not on
+    // the /api/public-studies feed that drives this table — so match each row back to its
+    // enriched record by id, then name. Built once per render.
+    const psEnr = (dataService.getEnrichedStudies ? dataService.getEnrichedStudies() : []);
+    const psEnrById = {}, psEnrByName = {};
+    psEnr.forEach(e => { if (e && e.id != null) psEnrById[String(e.id)] = e; if (e && e.name) psEnrByName[String(e.name).trim().toLowerCase()] = e; });
+    const psSpendCpoFor = (s) => {
+      let e = s.id != null ? psEnrById[String(s.id)] : null;
+      if (!e && s.name) e = psEnrByName[String(s.name).trim().toLowerCase()];
+      return { spend: e ? studySpend(e) : 0, cpo: e ? getCPO(e) : null };
+    };
     const rows = (psModel.studies || []).map(s => {
       const cat = catalogStatus(s);
       const m = psJoinMetrics(s, baseYm);
@@ -5284,9 +5309,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         && (catDays != null && catDays >= RETIRE_MIN_CATALOG_DAYS)
         && psDecliningTrend(s, baseYm);
       const isLive = cat.key === 'live';
+      const sc = psSpendCpoFor(s);
       return { s, cat, isLive, joins7d: m.joins7d, joins30d: m.joins30d, joins90d: m.joins90d, lastJoinMonth: m.lastJoinMonth, retire,
         participants: psParticipantsFor(s), ageDays: catDays, compl: psComplianceFor(s), health: isLive ? psHealth(s) : null,
-        wearables: psWearablesForStudy(s) };
+        wearables: psWearablesForStudy(s), spendVal: sc.spend, cpoVal: sc.cpo };
     });
 
     const dir = psJrSortDir === 'asc' ? 1 : -1;
@@ -5296,6 +5322,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         case 'category': return r.s.category || '';
         case 'status':   return r.cat.label || '';
         case 'participants': return r.participants == null ? -1 : r.participants;
+        case 'spend':        return r.spendVal || 0;
+        case 'cpo':          return r.cpoVal == null ? 999999 : r.cpoVal;
         case 'wearables':    return r.wearables ? Object.values(r.wearables).reduce((a, b) => a + b, 0) : -1;
         case 'age':          return r.ageDays == null ? -1 : r.ageDays;
         case 'compliance':   return r.compl ? r.compl.pct : -1;
@@ -5362,6 +5390,8 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         <td>${retireCell}</td>
         <td>${healthCell}</td>
         <td class="num">${partCell}</td>
+        <td class="num">${r.spendVal > 0 ? fmt(r.spendVal) : '<span style="color:var(--text-dim);">—</span>'}</td>
+        <td class="num">${r.cpoVal != null ? fmt(r.cpoVal) : '<span style="color:var(--text-dim);">—</span>'}</td>
         <td>${wearCell}</td>
         <td class="num">${fmtInt(Number(s.new) || 0)}</td>
         <td class="num">${fmtInt(Number(s.returning) || 0)}</td>
