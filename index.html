@@ -921,6 +921,20 @@ tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: var(--surface);
     </div>
   </div>
 
+  <!-- 5d. Population Representativeness — pool vs benchmark adult population -->
+  <div class="section" id="representativeness-section">
+    <div class="section-toggle collapsed" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('collapsed')">
+      <h2>Population Representativeness</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="section-body collapsed">
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:14px;">
+        How representative our participant pool is versus the benchmark <strong style="color:var(--text-secondary);">adult</strong> population &mdash; not just our internal mix. For each ethnicity group: our share, the benchmark share, and the gap (over/under-represented). The biggest under-representations are flagged as <strong style="color:var(--lime);">recruitment priorities</strong>.
+      </div>
+      <div id="representativeness-content"><div style="color:var(--text-dim);font-size:13px;">Loading representativeness&hellip;</div></div>
+    </div>
+  </div>
+
   <!-- 6. LTV & Financial (Placeholder) -->
   <div class="section" id="ltv-section">
     <div class="section-toggle collapsed" onclick="this.classList.toggle('collapsed');this.nextElementSibling.classList.toggle('collapsed')">
@@ -4657,6 +4671,7 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
       gapCompletion = cm;
     } catch (e) { gapCompletion = null; }
     renderGapStudies();
+    renderRepresentativeness();
   }
 
   // ── Gap → Top Studies cross-tab (where to recruit each priority gap) ──
@@ -4739,6 +4754,112 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     el.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">${cards}</div>
       <div style="font-size:11px;color:var(--text-dim);margin-top:14px;">Public studies only · min ${GAP_FLOOR} known · share = % of the study&rsquo;s known participants · <span style="color:var(--lime);">N×</span> = vs ecosystem baseline (≥1.4× highlighted) · trailing % = <span style="color:#34D399;">completion</span> (green ≥55% retains · amber 35–55 · red &lt;35). Rare segments are small-N and ethnicity coverage ~74% — directional. Favor formats that over-index <strong>and</strong> retain. <span style="color:var(--text-secondary);">Age bands are pulled straight from <code style="color:var(--text-secondary);">/api/demographics</code> (17-, 18-25 … 56-65, 66+); the API&rsquo;s top cut is <strong style="color:var(--text);">66+</strong>, not 65+, so there is no separate 65+ band — nothing here is estimated or back-calculated.</span></div>`;
+  }
+
+  // ── Population Representativeness: our pool's ethnicity vs a benchmark adult population ──
+  // Benchmarks are keyed by REGION so a new one drops in without touching the render: add
+  // REP_BENCHMARKS.CA (Canadian adult figures, same shape) and a region button appears
+  // automatically. Reuses the live pool ethnicity (ecoData) — no separate input.
+  const REP_CATEGORIES = ['White', 'Hispanic or Latino', 'Black or African American', 'Asian', 'Multiracial/Other', 'Native American', 'Pacific Islander'];
+  const REP_BENCHMARKS = {
+    US: {
+      label: 'US adults (18+)',
+      source: 'U.S. Census Bureau, 2020 Census — population aged 18+ (race alone, non-Hispanic, with Hispanic/Latino counted separately). Small-group figures are directional; verify against Census table DP05.',
+      pct: {
+        'White': 60.8,
+        'Hispanic or Latino': 16.8,
+        'Black or African American': 12.1,
+        'Asian': 5.9,
+        'Multiracial/Other': 3.6,
+        'Native American': 0.6,
+        'Pacific Islander': 0.2,
+      },
+    },
+    // Expanding north later? Drop this in — same shape, adult (18+) figures, cite Statistics Canada:
+    // CA: { label: 'Canadian adults (18+)', source: 'Statistics Canada, 2021 Census (18+)', pct: { 'White': ..., ... } },
+  };
+  let repRegion = 'US';
+  // Map whatever ethnicity string the feed returns onto one of REP_CATEGORIES (keyword match,
+  // resilient to label variants). Unknown / prefer-not-to-say → null (excluded from the base).
+  function repCanonicalEthnicity(raw) {
+    const s = String(raw == null ? '' : raw).toLowerCase();
+    if (!s || /unknown|prefer not|declined|not (stated|reported|specified)|n\/a/.test(s)) return null;
+    if (/hispanic|latino|latina|latinx/.test(s)) return 'Hispanic or Latino';
+    if (/black|african/.test(s)) return 'Black or African American';
+    if (/pacific|hawaiian/.test(s)) return 'Pacific Islander';
+    if (/american indian|alaska|native american|indigenous|first nation/.test(s)) return 'Native American';
+    if (/white|caucasian/.test(s)) return 'White';   // before Asian: "caucasian" contains "asian"
+    if (/asian/.test(s)) return 'Asian';
+    return 'Multiracial/Other';   // two or more, mixed, some other race, or any unrecognized known value
+  }
+
+  function renderRepresentativeness() {
+    const el = $('#representativeness-content');
+    if (!el) return;
+    if (!ecoData || !Array.isArray(ecoData.studies)) {
+      el.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Representativeness data unavailable — needs the live <code style="color:var(--text-secondary);">/api/demographics</code> feed. Nothing is estimated.</div>';
+      return;
+    }
+    const bench = REP_BENCHMARKS[repRegion] || REP_BENCHMARKS.US;
+    const ethDist = (ecoRollup(ecoData.studies).ethnicity) || {};
+    const counts = {}; REP_CATEGORIES.forEach(c => { counts[c] = 0; });
+    let known = 0, excluded = 0;
+    for (const [raw, n] of Object.entries(ethDist)) {
+      const v = Number(n) || 0;
+      const cat = repCanonicalEthnicity(raw);
+      if (!cat) { excluded += v; continue; }
+      counts[cat] += v; known += v;
+    }
+    if (!known) { el.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">No ethnicity data in the pool yet.</div>'; return; }
+
+    const rows = REP_CATEGORIES.map(c => {
+      const ourPct = counts[c] / known * 100;
+      const usPct = Number(bench.pct[c]) || 0;
+      return { cat: c, n: counts[c], ourPct, usPct, gap: ourPct - usPct };
+    });
+    const maxPct = Math.max.apply(null, rows.map(r => Math.max(r.ourPct, r.usPct)).concat([1]));
+    const gcolor = g => Math.abs(g) < 2 ? '#34D399' : g < 0 ? '#FB7185' : '#60A5FA';   // balanced / under / over
+    const gtag = g => Math.abs(g) < 2 ? 'representative' : g < 0 ? 'under-represented' : 'over-represented';
+    const th = t => `<th style="text-align:${t === 'Group' || t === 'Status' ? 'left' : 'right'};padding:9px 12px;color:var(--lime);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;border-bottom:1px solid var(--border);white-space:nowrap;">${t}</th>`;
+
+    const bodyRows = rows.map(r => {
+      const c = gcolor(r.gap);
+      return `<tr>
+        <td style="padding:9px 12px;border-bottom:1px solid var(--border-dark);"><strong style="color:var(--text);">${esc(r.cat)}</strong></td>
+        <td style="padding:9px 12px;border-bottom:1px solid var(--border-dark);text-align:right;white-space:nowrap;"><span style="font-weight:600;">${r.ourPct.toFixed(1)}%</span> <span style="color:var(--text-dim);font-size:11px;">(${fmtInt(r.n)})</span><div style="height:5px;margin-top:4px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${(r.ourPct / maxPct * 100).toFixed(1)}%;background:var(--lime);"></div></div></td>
+        <td style="padding:9px 12px;border-bottom:1px solid var(--border-dark);text-align:right;white-space:nowrap;"><span style="font-weight:600;color:var(--text-secondary);">${r.usPct.toFixed(1)}%</span><div style="height:5px;margin-top:4px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${(r.usPct / maxPct * 100).toFixed(1)}%;background:rgba(255,255,255,0.35);"></div></div></td>
+        <td style="padding:9px 12px;border-bottom:1px solid var(--border-dark);text-align:right;white-space:nowrap;font-weight:700;color:${c};">${r.gap >= 0 ? '+' : ''}${r.gap.toFixed(1)} pp</td>
+        <td style="padding:9px 12px;border-bottom:1px solid var(--border-dark);white-space:nowrap;color:${c};font-size:12px;">${gtag(r.gap)}</td>
+      </tr>`;
+    }).join('');
+
+    // Recruitment priorities = the groups most under-represented vs the benchmark (gap ≤ −2 pp).
+    const priorities = rows.filter(r => r.gap <= -2).sort((a, b) => a.gap - b.gap);
+    const priHtml = priorities.length
+      ? priorities.map((r, i) => `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(251,113,133,0.1);border:1px solid rgba(251,113,133,0.3);border-radius:100px;padding:5px 12px;font-size:12px;color:#FB7185;font-weight:600;">${i + 1}. ${esc(r.cat)} <span style="color:var(--text-secondary);font-weight:400;">${r.gap.toFixed(1)} pp</span></span>`).join(' ')
+      : '<span style="color:#34D399;font-size:12px;">No group is under-represented by more than 2 points — the pool tracks the benchmark closely.</span>';
+
+    const regionKeys = Object.keys(REP_BENCHMARKS);
+    const regionCtl = regionKeys.length > 1
+      ? '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + regionKeys.map(k => `<button data-rep-region="${esc(k)}" style="cursor:pointer;font-size:12px;font-weight:600;padding:6px 14px;border-radius:100px;border:1px solid ${k === repRegion ? 'var(--lime)' : 'var(--border-dark)'};background:${k === repRegion ? 'var(--lime-bg)' : 'transparent'};color:${k === repRegion ? 'var(--lime)' : 'var(--text-dim)'};">${esc(REP_BENCHMARKS[k].label)}</button>`).join('') + '</div>'
+      : `<span style="font-size:12px;color:var(--text-dim);">Benchmark: <strong style="color:var(--text-secondary);">${esc(bench.label)}</strong></span>`;
+
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+        ${regionCtl}
+        <span style="font-size:11px;color:var(--text-dim);">Pool base: <strong style="color:var(--text-secondary);">${fmtInt(known)}</strong> with known ethnicity${excluded ? ` · ${fmtInt(excluded)} unknown excluded` : ''}</span>
+      </div>
+      <div style="margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,rgba(251,113,133,0.08),rgba(255,255,255,0.02));border:1px solid rgba(251,113,133,0.25);border-radius:12px;">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#FB7185;margin-bottom:10px;">Recruitment priorities &mdash; most under-represented vs ${esc(bench.label)}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">${priHtml}</div>
+      </div>
+      <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr>${th('Group')}${th('Our pool')}${th(esc(bench.label))}${th('Gap')}${th('Status')}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:12px;line-height:1.55;"><strong style="color:var(--text-secondary);">Gap</strong> = our % &minus; benchmark % (percentage points). <span style="color:#FB7185;">Rose = under-represented</span> (recruit more) &middot; <span style="color:#60A5FA;">blue = over-represented</span> &middot; <span style="color:#34D399;">green = within 2 pts</span>. Our pool is live ethnicity from <code style="color:var(--text-secondary);">/api/demographics</code> across all studies (counted once per study; Unknown / prefer-not-to-say excluded from the base). <strong style="color:var(--text-secondary);">Benchmark:</strong> ${esc(bench.source)}</div>`;
+
+    el.querySelectorAll('[data-rep-region]').forEach(b => b.addEventListener('click', () => { repRegion = b.getAttribute('data-rep-region'); renderRepresentativeness(); }));
   }
 
   function renderAll() {
