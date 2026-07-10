@@ -153,6 +153,9 @@
     // Prior working figures from the plan snapshot — shown ONLY to flag drift
     // against the live feed ("flag the differences for me"). NOT used as truth.
     var PRIOR = { whoop:449, apple:114, oura:4480, fitbit:57, garmin:42 };
+    // When the PRIOR snapshot figures above were recorded (per this plan's git history — the
+    // figures were written in on 2026-07-01). Update alongside PRIOR whenever the snapshot is re-taken.
+    var PRIOR_AS_OF = 'Jul 1, 2026';
     var LABEL = { oura:'Oura', whoop_v2:'WHOOP', whoop:'WHOOP', fitbit:'Fitbit', garmin:'Garmin', apple_health_kit:'Apple Watch', apple_watch:'Apple Watch' };
     var MIN_N = 30;        // below this: "too small to break down reliably" — raw count, no %
     var FLOOR_ABS = 500;   // absolute-floor option
@@ -231,7 +234,7 @@
         + '<div style="font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--lime);margin-bottom:6px;">Live vs. the plan&rsquo;s working figures</div>'
         + '<div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:12px;line-height:1.55;">You flagged the old feed as possibly wrong, so here&rsquo;s each live count next to the figure written into the plan snapshot. <strong style="color:var(--text);">The live column governs.</strong> '
         + (anyDrift ? '<span style="color:#FB7185;">Some counts drifted &mdash; flagged with &#9888; below.</span>' : 'No material drift &mdash; the live feed matches the plan snapshot.') + '</div>'
-        + '<table class="lt"><thead><tr><th>Wearable</th><th class="num">Plan snapshot (prior)</th><th class="num">Live now</th><th class="num">Change vs. plan</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+        + '<table class="lt"><thead><tr><th>Wearable</th><th class="num">Plan snapshot (prior)<br><span style="text-transform:none;font-weight:400;font-size:9.5px;color:var(--text-dim);letter-spacing:0;">as of ' + PRIOR_AS_OF + '</span></th><th class="num">Live now</th><th class="num">Change vs. plan</th></tr></thead><tbody>' + body + '</tbody></table></div>';
     }
 
     // ── Section 1: primary targets, per wearable ────────────────────────────
