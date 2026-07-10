@@ -30,8 +30,7 @@ Owner: Katie · Reviewer: Pankaj · Confirm targets with Mackenzie.
 | **Oura** | **4,480** | maintain | — | Already ~75% of the base — dominant, sufficient. |
 | **Garmin** | **42** | *monitor* | — | Below floor; rides the steps studies, no dedicated push. |
 
-**The ≥500-or-10% floor.** Any wearable we *support* should reach **≥ ~500 people, ≈10% of
-the ecosystem** (base ≈ **5,950 participations** / **2,892 distinct**; 10% ≈ 500–600). Below
+**The ≥500 floor.** Any wearable we *support* should reach **≥ ~500 people**. Below
 that there isn't enough of that population to run anything meaningful. Today only **WHOOP**
 and **Apple Watch** clear (or target past) the floor; **Fitbit (57)** and **Garmin (42)** do
 not — so they're "support only if we fund them to 500," otherwise they ride along.
@@ -224,7 +223,7 @@ The order of operations before we commit paid budget.
   ~1.6×). `[Mackenzie: verify]` The target assumes a paid/partner/clinical-crossover lever — decide that lever before committing.
 - **Projected demographics are live, not in this doc.** They're in the Wearable-first mix
   view so they can't go stale; this doc intentionally doesn't restate them as numbers.
-- **Floor is a policy, not a measurement yet** — confirm the 10% base (participations vs.
-  distinct) you want the floor computed against.
+- **Floor is a flat ≥500 policy** — a supported wearable needs ≥ ~500 people. The tool had
+  added a 10%-of-ecosystem alternative; Pankaj dropped it, so ≥500 is the whole rule.
 
 Owner: Katie · Reviewer: Pankaj · Working draft — confirm wearable targets + budget before committing.
