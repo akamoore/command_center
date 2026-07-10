@@ -125,6 +125,8 @@
 
   <div id="live"><p class="status">Computing live from the corrected study data&hellip;</p></div>
 
+  <div id="gap-live"></div>
+
   <div class="section-label">The full written plan</div>
   <p style="font-size:13px;color:var(--text-muted);margin:0 0 2px;max-width:820px;">Narrative detail &mdash; study specs, rotation calendar, budget. <strong style="color:var(--text-secondary);">The live numbers above supersede any counts written here</strong> (this doc is a dated snapshot).</p>
   <nav class="toc" id="toc"></nav>
@@ -165,6 +167,8 @@
     var mix = null;        // { slug: { total, gender:{}, age:{}, ethnicity:{} } } — real joint counts
     var ecoTotal = 0;      // sum of participations across ALL wearables (incl. Unknown)
     var unknownTotal = 0;  // participations with no wearable recorded
+    var ecoStudies = null;     // per-study /api/demographics marginals — for Gap → Top Studies
+    var gapCompletion = null;  // study id/name → completionRate (/api/public-studies)
 
     var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); };
     var fmt = function (n) { return (Number(n) || 0).toLocaleString(); };
@@ -364,6 +368,73 @@
         + aggBlock + '</div>';
     }
 
+    // ── Gap → Top Studies: which public studies over-index on each priority gap ──
+    // Ported from the Command Center dashboard so both read identically. Uses per-study
+    // /api/demographics marginals (ecoStudies) + completion from /api/public-studies. Real
+    // data only — if the per-study feed is missing, the section shows "unavailable", never
+    // an estimate. Same exclusion list as the dashboard so the two never diverge.
+    var GAP_EXCLUDED_NAMES = ['cure hydration','optimize her retreat','nad+ beverage','caffeine effect','nuchido 2','nuchido 3','march 12 test','a coffee study','enhanced brew formula (ebf)'];
+    var GAP_TEST_MARKERS = [/\(internal\)/i,/\(test\b/i,/\btest\)/i,/\bnuchido\b/i,/\blabs test\b/i,/\bmarch \d+ test\b/i,/\bdropbox\b/i,/\bsandbox\b/i,/\bdemo\b/i,/\bqa\b/i];
+    function gapIsExcluded(name){ var n=String(name||'').toLowerCase(); return GAP_EXCLUDED_NAMES.some(function(ex){return n.indexOf(ex)!==-1;}) || GAP_TEST_MARKERS.some(function(re){return re.test(String(name||''));}); }
+    var GAP_DIMS = ['wearable','gender','age','ethnicity'];
+    var GAP_TARGETS = [
+      { label:'WHOOP',          dim:'wearable',  buckets:['whoop_v2'] },
+      { label:'Apple Watch',    dim:'wearable',  buckets:['apple_health_kit'] },
+      { label:'Fitbit',         dim:'wearable',  buckets:['fitbit'] },
+      { label:'Garmin',         dim:'wearable',  buckets:['garmin'] },
+      { label:'Male',           dim:'gender',    buckets:['Male'] },
+      { label:'Age 56–65', dim:'age',       buckets:['56-65'] },
+      { label:'Age 66+',        dim:'age',       buckets:['66+'] },
+      { label:'Hispanic',       dim:'ethnicity', buckets:['Hispanic or Latino'] },
+      { label:'Black',          dim:'ethnicity', buckets:['Black or African American'] }
+    ];
+    var GAP_EXCL = ['Unknown','Prefer Not To State','Prefer not to say'];
+    var GAP_FLOOR = 20;
+    function gapRollup(studies){ var out={}; GAP_DIMS.forEach(function(k){out[k]={};}); (studies||[]).forEach(function(s){ GAP_DIMS.forEach(function(k){ var dist=s[k]; if(dist&&typeof dist==='object'){ for(var b in dist) out[k][b]=(out[k][b]||0)+(Number(dist[b])||0); } }); }); return out; }
+    function gapKnown(dist){ var t=0; for(var k in dist){ if(GAP_EXCL.indexOf(k)===-1) t+=Number(dist[k])||0; } return t; }
+    function gapCount(dist,buckets){ var c=0; for(var i=0;i<buckets.length;i++) c+=Number(dist[buckets[i]])||0; return c; }
+    function renderGapLive(){
+      var host=document.getElementById('gap-live'); if(!host) return;
+      var studies=(ecoStudies||[]).filter(function(s){ return s && !gapIsExcluded(s.name); });
+      if(!studies.length){
+        host.innerHTML='<div class="live-sec"><h2>Gap → Top Studies</h2><div class="card"><div style="color:#FBBF24;font-weight:600;">Gap data unavailable.</div><div style="font-size:13px;color:var(--text-dim);margin-top:8px;line-height:1.6;">This needs per-study marginals from <code style="color:var(--lime-light);">/api/demographics</code>. Nothing is estimated &mdash; reload once the feed returns.</div></div></div>';
+        return;
+      }
+      var pub=studies.filter(function(s){ return String(s.type||'').toLowerCase()==='public'; });
+      var eco=gapRollup(studies);
+      var cards=GAP_TARGETS.map(function(g){
+        var baseDist=eco[g.dim]||{}, baseKnown=gapKnown(baseDist);
+        var baseShare=baseKnown?gapCount(baseDist,g.buckets)/baseKnown:0;
+        var rows=pub.map(function(s){
+          var dist=s[g.dim]||{}, kt=gapKnown(dist);
+          if(kt<GAP_FLOOR) return null;
+          var c=gapCount(dist,g.buckets);
+          return { id:s.id, name:s.name, c:c, kt:kt, share:c/kt, idx:baseShare?(c/kt)/baseShare:0 };
+        }).filter(Boolean).sort(function(a,b){return b.share-a.share;}).slice(0,5);
+        var compFor=function(r){ if(!gapCompletion) return null; var byId=gapCompletion['#'+r.id]; if(byId!=null) return byId; var byName=gapCompletion[String(r.name).toLowerCase()]; return byName!=null?byName:null; };
+        var rowHtml=rows.length?rows.map(function(r){
+          var strong=r.idx>=1.4, comp=compFor(r);
+          var compColor=comp==null?'var(--text-dim)':comp>=55?'#34D399':comp>=35?'#FBBF24':'#FB7185';
+          var compHtml=comp==null?'':' &middot; <span style="color:'+compColor+';">'+Math.round(comp)+'%</span>';
+          return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12px;margin-bottom:5px;"><span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(r.name)+'</span><span style="color:var(--text-dim);white-space:nowrap;">'+(r.share*100).toFixed(0)+'% <span style="color:var(--text-secondary);">('+r.c+'/'+r.kt+')</span> <span style="color:'+(strong?'var(--lime)':'var(--text-dim)')+';font-weight:'+(strong?'700':'400')+';">'+r.idx.toFixed(1)+'×</span>'+compHtml+'</span></div>';
+        }).join(''):'<div style="color:var(--text-dim);font-size:12px;">No public study clears the sample floor.</div>';
+        return '<div class="card" style="padding:16px;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;"><h3 style="margin:0;font-size:14px;color:var(--text);">'+esc(g.label)+'</h3><span style="font-size:10px;color:var(--text-dim);">base '+(baseShare*100).toFixed(1)+'%</span></div>'+rowHtml+'</div>';
+      }).join('');
+      host.innerHTML='<div class="live-sec"><h2>Gap → Top Studies</h2>'
+        +'<p class="lead">For each priority gap, the public studies that <strong style="color:var(--text-secondary);">over-index</strong> on it &mdash; i.e. which formats to clone or relaunch to recruit that segment. Share is % of the study’s known participants; <strong style="color:var(--lime);">N×</strong> is multiples of the ecosystem baseline.</p>'
+        +'<div class="card" style="background:linear-gradient(135deg,rgba(200,230,74,0.06),rgba(255,255,255,0.02));border-color:rgba(200,230,74,0.2);margin-bottom:16px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--lime);margin-bottom:10px;">What the cohorts tell us</div><ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--text-secondary);line-height:1.7;">'
+        +'<li><strong style="color:var(--text);">Recruit by theme, not by study.</strong> The same handful of formats recur across gaps &mdash; pick the format type and one study can fill several gaps at once.</li>'
+        +'<li><strong style="color:var(--text);">Mainstream wearables travel together.</strong> Apple Watch, Fitbit, and Garmin all over-index on movement &amp; steps challenges &mdash; one steps study pulls all three.</li>'
+        +'<li><strong style="color:var(--text);">Men are a category gap, not a study gap.</strong> Wellness challenges run ~30% male regardless; only energy-drink / sports formats (e.g. Celsius) break out.</li>'
+        +'<li><strong style="color:var(--text);">Whoop moves slowly here.</strong> It barely over-indexes in public studies &mdash; Whoop users concentrate in recovery/clinical studies, so expect gradual gains.</li>'
+        +'<li><strong style="color:var(--text);">Ethnicity &amp; 60+ have no silver bullet.</strong> Short, low-friction sleep / stress / breathwork formats (Power Nap, Gratitude, 4-7-8, Yoga) over-index for Hispanic &amp; Black, but only modestly.</li>'
+        +'<li><strong style="color:var(--text);">Quality-check before you clone.</strong> Big N× often sit on tiny samples &mdash; and each study’s trailing % is its completion rate, so favor formats that over-index <em>and</em> retain (<span style="color:#34D399;">green ≥55%</span>) over ones that leak.</li>'
+        +'</ul></div>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">'+cards+'</div>'
+        +'<div style="font-size:11px;color:var(--text-dim);margin-top:14px;line-height:1.55;">Public studies only &middot; min '+GAP_FLOOR+' known &middot; share = % of the study’s known participants &middot; <span style="color:var(--lime);">N×</span> = vs ecosystem baseline (≥1.4× highlighted) &middot; trailing % = <span style="color:#34D399;">completion</span> (green ≥55% &middot; amber 35–55 &middot; red &lt;35). Rare segments are small-N and ethnicity coverage ~74% &mdash; directional. Age bands come straight from <code style="color:var(--text-secondary);">/api/demographics</code> (17-, 18-25 … 56-65, 66+) &mdash; nothing estimated.</div>'
+        +'</div>';
+    }
+
     function renderAll() {
       $live.innerHTML = secReconcile() + secTargets() + secThreshold() + secProjections();
     }
@@ -398,6 +469,23 @@
     }).catch(function (err) {
       $live.innerHTML = '<div class="card"><div style="color:#FBBF24;font-weight:600;">Couldn&rsquo;t reach the live study data (' + esc(err.message) + ').</div>'
         + '<div style="font-size:13px;color:var(--text-dim);margin-top:8px;line-height:1.6;">Every number on this page is computed live from <code style="color:var(--lime-light);">/api/demographics</code> &mdash; nothing is cached or hard-coded &mdash; so with the feed unreachable there&rsquo;s nothing to show. Reload once it&rsquo;s back; no estimates are substituted.</div></div>';
+    });
+
+    // Gap → Top Studies data — per-study demographics + completion. Separate & non-blocking:
+    // a failure here never affects the sections above; the gap card just reads "unavailable".
+    Promise.all([
+      fetchDemo('').catch(function () { return null; }),
+      fetch('/api/public-studies', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+    ]).then(function (g) {
+      var demo = g[0];
+      if (demo && Array.isArray(demo.studies)) ecoStudies = demo.studies;
+      var ps = g[1];
+      if (ps && Array.isArray(ps.studies)) {
+        var cm = {};
+        ps.studies.forEach(function (s) { if (!s || s.completionRate == null) return; var cr = Number(s.completionRate); if (s.id != null) cm['#' + s.id] = cr; if (s.name) cm[String(s.name).toLowerCase()] = cr; });
+        gapCompletion = cm;
+      }
+      renderGapLive();
     });
   })();
 
