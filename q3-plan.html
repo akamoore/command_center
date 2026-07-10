@@ -127,6 +127,8 @@
 
   <div id="gap-live"></div>
 
+  <div id="rep-live"></div>
+
   <div class="section-label">The full written plan</div>
   <p style="font-size:13px;color:var(--text-muted);margin:0 0 2px;max-width:820px;">Narrative detail &mdash; study specs, rotation calendar, budget. <strong style="color:var(--text-secondary);">The live numbers above supersede any counts written here</strong> (this doc is a dated snapshot).</p>
   <nav class="toc" id="toc"></nav>
@@ -393,6 +395,77 @@
     function gapRollup(studies){ var out={}; GAP_DIMS.forEach(function(k){out[k]={};}); (studies||[]).forEach(function(s){ GAP_DIMS.forEach(function(k){ var dist=s[k]; if(dist&&typeof dist==='object'){ for(var b in dist) out[k][b]=(out[k][b]||0)+(Number(dist[b])||0); } }); }); return out; }
     function gapKnown(dist){ var t=0; for(var k in dist){ if(GAP_EXCL.indexOf(k)===-1) t+=Number(dist[k])||0; } return t; }
     function gapCount(dist,buckets){ var c=0; for(var i=0;i<buckets.length;i++) c+=Number(dist[buckets[i]])||0; return c; }
+    // ── Population Representativeness: our pool's ethnicity vs a benchmark adult population ──
+    // Same module as the Command Center dashboard. Benchmarks are keyed by region so Canadian
+    // adult data drops in later (add REP_BENCHMARKS.CA and a toggle appears). Reuses ecoStudies
+    // (per-study /api/demographics) — no separate input.
+    var REP_CATEGORIES = ['White','Hispanic or Latino','Black or African American','Asian','Multiracial/Other','Native American','Pacific Islander'];
+    var REP_BENCHMARKS = {
+      US: {
+        label: 'US adults (18+)',
+        source: 'U.S. Census Bureau, 2020 Census — population aged 18+ (race alone, non-Hispanic, with Hispanic/Latino counted separately). Small-group figures are directional; verify against Census table DP05.',
+        pct: { 'White':60.8, 'Hispanic or Latino':16.8, 'Black or African American':12.1, 'Asian':5.9, 'Multiracial/Other':3.6, 'Native American':0.6, 'Pacific Islander':0.2 }
+      }
+      // CA: { label:'Canadian adults (18+)', source:'Statistics Canada, 2021 Census (18+)', pct:{ 'White':..., ... } }
+    };
+    var repRegion = 'US';
+    function repCanonicalEthnicity(raw){
+      var s = String(raw==null?'':raw).toLowerCase();
+      if(!s || /unknown|prefer not|declined|not (stated|reported|specified)|n\/a/.test(s)) return null;
+      if(/hispanic|latino|latina|latinx/.test(s)) return 'Hispanic or Latino';
+      if(/black|african/.test(s)) return 'Black or African American';
+      if(/pacific|hawaiian/.test(s)) return 'Pacific Islander';
+      if(/american indian|alaska|native american|indigenous|first nation/.test(s)) return 'Native American';
+      if(/white|caucasian/.test(s)) return 'White';   // before Asian: "caucasian" contains "asian"
+      if(/asian/.test(s)) return 'Asian';
+      return 'Multiracial/Other';
+    }
+    function renderRepLive(){
+      var host=document.getElementById('rep-live'); if(!host) return;
+      var studies=(ecoStudies||[]).filter(function(s){ return s && !gapIsExcluded(s.name); });
+      if(!studies.length){
+        host.innerHTML='<div class="live-sec"><h2>Population Representativeness</h2><div class="card"><div style="color:#FBBF24;font-weight:600;">Representativeness data unavailable.</div><div style="font-size:13px;color:var(--text-dim);margin-top:8px;line-height:1.6;">Needs per-study ethnicity from <code style="color:var(--lime-light);">/api/demographics</code>. Nothing is estimated.</div></div></div>';
+        return;
+      }
+      var bench=REP_BENCHMARKS[repRegion]||REP_BENCHMARKS.US;
+      var ethDist=(gapRollup(studies).ethnicity)||{};
+      var counts={}; REP_CATEGORIES.forEach(function(c){counts[c]=0;});
+      var known=0, excluded=0;
+      Object.keys(ethDist).forEach(function(raw){ var v=Number(ethDist[raw])||0; var cat=repCanonicalEthnicity(raw); if(!cat){excluded+=v;return;} counts[cat]+=v; known+=v; });
+      if(!known){ host.innerHTML='<div class="live-sec"><h2>Population Representativeness</h2><div class="card"><div style="color:var(--text-dim);">No ethnicity data in the pool yet.</div></div></div>'; return; }
+      var rows=REP_CATEGORIES.map(function(c){ var our=counts[c]/known*100, us=Number(bench.pct[c])||0; return {cat:c,n:counts[c],our:our,us:us,gap:our-us}; });
+      var maxPct=Math.max.apply(null, rows.map(function(r){return Math.max(r.our,r.us);}).concat([1]));
+      var gcolor=function(g){return Math.abs(g)<2?'#34D399':g<0?'#FB7185':'#60A5FA';};
+      var gtag=function(g){return Math.abs(g)<2?'representative':g<0?'under-represented':'over-represented';};
+      var body=rows.map(function(r){ var c=gcolor(r.gap);
+        return '<tr>'
+          +'<td style="padding:9px 12px;border-bottom:1px solid var(--border);"><strong style="color:var(--text);">'+esc(r.cat)+'</strong></td>'
+          +'<td style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;"><span style="font-weight:600;color:var(--text);">'+r.our.toFixed(1)+'%</span> <span style="color:var(--text-dim);font-size:11px;">('+fmt(r.n)+')</span><div style="height:5px;margin-top:4px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;"><div style="height:100%;width:'+(r.our/maxPct*100).toFixed(1)+'%;background:var(--lime);"></div></div></td>'
+          +'<td style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;"><span style="font-weight:600;color:var(--text-secondary);">'+r.us.toFixed(1)+'%</span><div style="height:5px;margin-top:4px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;"><div style="height:100%;width:'+(r.us/maxPct*100).toFixed(1)+'%;background:rgba(255,255,255,0.35);"></div></div></td>'
+          +'<td style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;font-weight:700;color:'+c+';">'+(r.gap>=0?'+':'')+r.gap.toFixed(1)+' pp</td>'
+          +'<td style="padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap;color:'+c+';font-size:12px;">'+gtag(r.gap)+'</td>'
+          +'</tr>';
+      }).join('');
+      var pri=rows.filter(function(r){return r.gap<=-2;}).sort(function(a,b){return a.gap-b.gap;});
+      var priHtml=pri.length?pri.map(function(r,i){return '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(251,113,133,0.1);border:1px solid rgba(251,113,133,0.3);border-radius:100px;padding:5px 12px;font-size:12px;color:#FB7185;font-weight:600;">'+(i+1)+'. '+esc(r.cat)+' <span style="color:var(--text-secondary);font-weight:400;">'+r.gap.toFixed(1)+' pp</span></span>';}).join(' '):'<span style="color:#34D399;font-size:12px;">No group is under-represented by more than 2 points — the pool tracks the benchmark closely.</span>';
+      var regionKeys=Object.keys(REP_BENCHMARKS);
+      var regionCtl=regionKeys.length>1?'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+regionKeys.map(function(k){return '<button data-rep-region="'+esc(k)+'" style="cursor:pointer;font-size:12px;font-weight:600;padding:6px 14px;border-radius:100px;border:1px solid '+(k===repRegion?'var(--lime)':'var(--border)')+';background:'+(k===repRegion?'rgba(200,230,74,0.12)':'transparent')+';color:'+(k===repRegion?'var(--lime)':'var(--text-dim)')+';">'+esc(REP_BENCHMARKS[k].label)+'</button>';}).join('')+'</div>':'<span style="font-size:12px;color:var(--text-dim);">Benchmark: <strong style="color:var(--text-secondary);">'+esc(bench.label)+'</strong></span>';
+      host.innerHTML='<div class="live-sec"><h2>Population Representativeness</h2>'
+        +'<p class="lead">How representative our participant pool is versus the benchmark <strong style="color:var(--text-secondary);">adult</strong> population &mdash; not just our internal mix. Per ethnicity group: our share, the benchmark share, and the gap. The biggest under-representations are flagged as <strong style="color:var(--lime);">recruitment priorities</strong>.</p>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">'+regionCtl+'<span style="font-size:11px;color:var(--text-dim);">Pool base: <strong style="color:var(--text-secondary);">'+fmt(known)+'</strong> with known ethnicity'+(excluded?' &middot; '+fmt(excluded)+' unknown excluded':'')+'</span></div>'
+        +'<div class="card" style="background:linear-gradient(135deg,rgba(251,113,133,0.08),rgba(255,255,255,0.02));border-color:rgba(251,113,133,0.25);margin-bottom:16px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#FB7185;margin-bottom:10px;">Recruitment priorities &mdash; most under-represented vs '+esc(bench.label)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'+priHtml+'</div></div>'
+        +'<div class="card" style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr>'
+        +'<th style="text-align:left;padding:9px 12px;color:var(--lime);font-size:10.5px;text-transform:uppercase;letter-spacing:0.07em;border-bottom:1px solid var(--border);">Group</th>'
+        +'<th style="text-align:right;padding:9px 12px;color:var(--lime);font-size:10.5px;text-transform:uppercase;letter-spacing:0.07em;border-bottom:1px solid var(--border);">Our pool</th>'
+        +'<th style="text-align:right;padding:9px 12px;color:var(--lime);font-size:10.5px;text-transform:uppercase;letter-spacing:0.07em;border-bottom:1px solid var(--border);">'+esc(bench.label)+'</th>'
+        +'<th style="text-align:right;padding:9px 12px;color:var(--lime);font-size:10.5px;text-transform:uppercase;letter-spacing:0.07em;border-bottom:1px solid var(--border);">Gap</th>'
+        +'<th style="text-align:left;padding:9px 12px;color:var(--lime);font-size:10.5px;text-transform:uppercase;letter-spacing:0.07em;border-bottom:1px solid var(--border);">Status</th>'
+        +'</tr></thead><tbody>'+body+'</tbody></table></div>'
+        +'<div style="font-size:11px;color:var(--text-dim);margin-top:12px;line-height:1.55;"><strong style="color:var(--text-secondary);">Gap</strong> = our % &minus; benchmark % (percentage points). <span style="color:#FB7185;">Rose = under-represented</span> (recruit more) &middot; <span style="color:#60A5FA;">blue = over-represented</span> &middot; <span style="color:#34D399;">green = within 2 pts</span>. Pool = live ethnicity from <code style="color:var(--text-secondary);">/api/demographics</code> across all studies (once per study; Unknown / prefer-not-to-say excluded). <strong style="color:var(--text-secondary);">Benchmark:</strong> '+esc(bench.source)+'</div>'
+        +'</div>';
+      Array.prototype.forEach.call(host.querySelectorAll('[data-rep-region]'),function(b){ b.addEventListener('click',function(){ repRegion=b.getAttribute('data-rep-region'); renderRepLive(); }); });
+    }
+
     function renderGapLive(){
       var host=document.getElementById('gap-live'); if(!host) return;
       var studies=(ecoStudies||[]).filter(function(s){ return s && !gapIsExcluded(s.name); });
@@ -486,6 +559,7 @@
         gapCompletion = cm;
       }
       renderGapLive();
+      renderRepLive();
     });
   })();
 
