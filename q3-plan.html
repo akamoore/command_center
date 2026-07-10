@@ -158,9 +158,8 @@
     var PRIOR_AS_OF = 'Jul 1, 2026';
     var LABEL = { oura:'Oura', whoop_v2:'WHOOP', whoop:'WHOOP', fitbit:'Fitbit', garmin:'Garmin', apple_health_kit:'Apple Watch', apple_watch:'Apple Watch' };
     var MIN_N = 30;        // below this: "too small to break down reliably" — raw count, no %
-    var FLOOR_ABS = 500;   // absolute-floor option
-    var FLOOR_PCT = 0.10;  // 10%-of-ecosystem floor option
-    var governRule = 'either';   // 'abs' | 'pct' | 'either' (still being decided)
+    var FLOOR_ABS = 500;   // supported-wearable floor: >= 500 people. Per Pankaj, the
+                           // 10%-of-ecosystem condition the tool had added was dropped — >= 500 is the whole rule.
 
     // state, populated after the live fetch
     var mix = null;        // { slug: { total, gender:{}, age:{}, ethnicity:{} } } — real joint counts
@@ -282,39 +281,24 @@
 
     // ── Section 2: minimum threshold check ──────────────────────────────────
     function secThreshold() {
-      var tenPct = Math.round(ecoTotal * FLOOR_PCT);
       var slugs = Object.keys(mix).filter(function (s) { return s && String(s).toLowerCase() !== 'unknown'; })
         .sort(function (a, b) { return (mix[b].total || 0) - (mix[a].total || 0); });
 
       var rows = slugs.map(function (s) {
         var n = mix[s].total || 0;
         var okAbs = n >= FLOOR_ABS;
-        var okPct = n >= tenPct;
-        var governed = governRule === 'abs' ? okAbs : governRule === 'pct' ? okPct : (okAbs || okPct);
-        var verdict = governed ? '<span class="pill ok">clears floor</span>' : '<span class="pill no">below floor</span>';
+        var verdict = okAbs ? '<span class="pill ok">clears floor</span>' : '<span class="pill no">below floor</span>';
         return '<tr><td><strong style="color:var(--text);">' + esc(LABEL[s] || s) + '</strong></td>'
           + '<td class="num">' + fmt(n) + '</td>'
           + '<td class="num">' + (okAbs ? '<span class="pill ok">&ge; 500</span>' : '<span class="pill no">&lt; 500</span>') + '</td>'
-          + '<td class="num">' + (okPct ? '<span class="pill ok">&ge; ' + fmt(tenPct) + '</span>' : '<span class="pill no">&lt; ' + fmt(tenPct) + '</span>') + '</td>'
           + '<td class="num">' + verdict + '</td></tr>';
       }).join('');
 
-      var ruleNote = governRule === 'either'
-        ? 'Governing rule is <strong style="color:var(--text-secondary);">still being decided</strong> &mdash; a wearable shows as clearing if it meets <em>either</em> test. Pick <strong>500</strong> or <strong>10%</strong> to see the stricter single-rule verdict.'
-        : governRule === 'abs'
-        ? 'Governing rule set to the <strong style="color:var(--lime);">absolute 500</strong> floor.'
-        : 'Governing rule set to <strong style="color:var(--lime);">10% of the ecosystem</strong> (' + fmt(tenPct) + ').';
-
       return '<div class="live-sec"><h2>2 &middot; Minimum threshold check</h2>'
-        + '<p class="lead">A supported wearable should reach <strong style="color:var(--text-secondary);">&ge; ~500 people</strong> <em>or</em> <strong style="color:var(--text-secondary);">~10% of the total ecosystem</strong>, whichever we decide governs. Total ecosystem (live) = <strong style="color:var(--lime);">' + fmt(ecoTotal) + '</strong> participations across all wearables'
-        + (unknownTotal ? ' (incl. ' + fmt(unknownTotal) + ' with no wearable recorded)' : '') + '; 10% = <strong style="color:var(--lime);">' + fmt(tenPct) + '</strong>.</p>'
-        + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">'
-        + '<span style="font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);">Governing rule</span>'
-        + '<span class="tog"><button data-rule="abs" class="' + (governRule === 'abs' ? 'on' : '') + '">500</button>'
-        + '<button data-rule="pct" class="' + (governRule === 'pct' ? 'on' : '') + '">10%</button>'
-        + '<button data-rule="either" class="' + (governRule === 'either' ? 'on' : '') + '">either (TBD)</button></span></div>'
-        + '<div class="card"><table class="lt"><thead><tr><th>Wearable</th><th class="num">Current (live)</th><th class="num">&ge; 500?</th><th class="num">&ge; 10% (' + fmt(tenPct) + ')?</th><th class="num">Governing verdict</th></tr></thead><tbody>' + rows + '</tbody></table>'
-        + '<div style="font-size:12px;color:var(--text-dim);margin-top:10px;">' + ruleNote + '</div></div></div>';
+        + '<p class="lead">A supported wearable should reach <strong style="color:var(--text-secondary);">&ge; ~500 people</strong>. Total ecosystem (live) = <strong style="color:var(--lime);">' + fmt(ecoTotal) + '</strong> participations across all wearables'
+        + (unknownTotal ? ' (incl. ' + fmt(unknownTotal) + ' with no wearable recorded)' : '') + '.</p>'
+        + '<div class="card"><table class="lt"><thead><tr><th>Wearable</th><th class="num">Current (live)</th><th class="num">&ge; 500?</th><th class="num">Governing verdict</th></tr></thead><tbody>' + rows + '</tbody></table>'
+        + '<div style="font-size:12px;color:var(--text-dim);margin-top:10px;">Governing rule: a wearable clears the floor at <strong style="color:var(--lime);">&ge; 500 people</strong>.</div></div></div>';
     }
 
     // ── Section 3: derived demographic projections ──────────────────────────
@@ -382,9 +366,6 @@
 
     function renderAll() {
       $live.innerHTML = secReconcile() + secTargets() + secThreshold() + secProjections();
-      Array.prototype.forEach.call($live.querySelectorAll('.tog button'), function (btn) {
-        btn.addEventListener('click', function () { governRule = btn.getAttribute('data-rule'); renderAll(); });
-      });
     }
 
     // ── fetch the three wearable×demographic cross-tabs, then compute ────────
