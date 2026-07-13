@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-07-10T15:22:36.113Z",
+  "updated_at": "2026-07-13T13:01:49.591Z",
   "period": {
     "start": "2025-01-01",
-    "end": "2026-07-10"
+    "end": "2026-07-13"
   },
   "totals": {
     "impressions": 3246399,
@@ -1793,9 +1793,9 @@
       "campaignName": "Summer Shred",
       "impressions": 2320,
       "clicks": 63,
-      "spend": 69.82,
-      "cpc": 1.11,
-      "cpm": 30.09,
+      "spend": 144,
+      "cpc": 2.29,
+      "cpm": 62.07,
       "ctr": 2.72,
       "firstMonth": "2026-06",
       "lastMonth": "2026-07"
