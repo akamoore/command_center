@@ -1897,7 +1897,21 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   function renderApiStatus() {
     const el = $('#api-status');
     if (apiData && apiData._fromCache) {
-      el.innerHTML = '<span class="status-badge cached"><span class="dot"></span>Cached API</span>';
+      // Live API unavailable — we're showing a cached snapshot. Surface HOW old it
+      // is so stale numbers can't be mistaken for current (a 4-month-old failed
+      // snapshot otherwise looks identical to a fresh one). Flag rose when stale.
+      const cachedAt = apiData._cached_at ? new Date(apiData._cached_at) : null;
+      const valid = cachedAt && !isNaN(cachedAt.getTime());
+      const ageDays = valid ? Math.floor((Date.now() - cachedAt.getTime()) / 86400000) : null;
+      const dateStr = valid ? cachedAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null;
+      const stale = ageDays !== null && ageDays >= 2;
+      const label = valid
+        ? `Cached · ${dateStr}${ageDays >= 1 ? ` (${ageDays}d old)` : ''}`
+        : 'Cached API';
+      const title = valid
+        ? `Live API unavailable — showing a cached snapshot from ${cachedAt.toLocaleString()}. Numbers are not current.`
+        : 'Live API unavailable — showing a cached snapshot. Numbers may not be current.';
+      el.innerHTML = `<span class="status-badge ${stale ? 'offline' : 'cached'}" title="${title}"><span class="dot"></span>${label}</span>`;
     } else if (apiData) {
       el.innerHTML = '<span class="status-badge live"><span class="dot"></span>Live API</span>';
     } else {
