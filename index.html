@@ -1284,6 +1284,38 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
   let selectedDays = 30;
   let selectedYear = 'all';
 
+  // Canonical study key for a Meta campaign name — the cached stats file and
+  // the operations API name the same study's campaigns differently (e.g.
+  // 'somato sleep study' vs 'Melatonin Sleep Study'), so dedupe between the
+  // two sources must happen at the study level, not the raw-name level.
+  const AD_CAMPAIGN_STUDY_ALIASES = {
+    'somato sleep study': 'Melatonin Sleep Study (Somato)',
+    'melatonin sleep study': 'Melatonin Sleep Study (Somato)',
+    'pain relief: proleevamax': 'Pain Relief: ProleevaMax',
+    'proleevamax': 'Pain Relief: ProleevaMax',
+    'proleeva - 2': 'Pain Relief: ProleevaMax',
+    'proleeva - 2 - leads - instant forms': 'Pain Relief: ProleevaMax',
+    'new proleeva campaign': 'Pain Relief: ProleevaMax',
+    'sleep peptide': 'Peptide Supplement: Sleep & Recovery',
+    'peptide supplement: sleep and recovery': 'Peptide Supplement: Sleep & Recovery',
+    'peptide supplement: sleep & recovery': 'Peptide Supplement: Sleep & Recovery',
+    'rehydration recovery': 'Rehydration Recovery',
+    'summer shred': 'Summer Shred',
+    'berkeley life': 'Nitrate Supplementation (Berkeley Life)',
+    "rootless women's health": "Rootless & Women's Health",
+    "rootless & women's health": "Rootless & Women's Health",
+    'coffee + oura ring study': 'Enhanced Brew — Coffee Study (Nov 2025)',
+    'enhanced brew - a coffee study': 'Enhanced Brew — Coffee Study (Nov 2025)',
+    'enhanced brew formula': 'Enhanced Brew Formula — RCT (Jun 2025)',
+    'caffeine study': 'Enhanced Brew Formula — RCT (Jun 2025)',
+    'quantum upgrade': "Quantum Upgrade & Women's Health",
+    'brain wellness: cognitive performance': 'Brain Wellness: Cognitive Performance',
+  };
+  const adCampaignStudyKey = name => {
+    const lower = (name || '').toLowerCase();
+    return AD_CAMPAIGN_STUDY_ALIASES[lower] || lower;
+  };
+
   const dataService = {
     async fetchRecruitingData(days) {
       // 1) Vercel proxy first — works in any browser (no CORS, no key leak).
@@ -1454,8 +1486,20 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     },
 
     getMetaAdsBreakdown() {
-      if (metaAdsData?.ads?.length) return metaAdsData.ads;
-      return apiData?.metaAds?.ads || [];
+      // The cached stats file is refreshed by a cron job and can go stale,
+      // silently dropping campaigns launched after its snapshot (this is how
+      // Brain Wellness went missing). Keep the cached entries (they carry the
+      // firstMonth/lastMonth range the Active column needs) and append live
+      // API campaigns for any study the cache doesn't cover. Dedupe is by
+      // study, not raw campaign name, so overlapping reporting windows for
+      // the same study are never double-counted.
+      const cached = metaAdsData?.ads?.length ? metaAdsData.ads : [];
+      const api = apiData?.metaAds?.ads || [];
+      if (!cached.length) return api;
+      if (!api.length) return cached;
+      const covered = new Set(cached.map(a => adCampaignStudyKey(a.campaignName)));
+      const extra = api.filter(a => !covered.has(adCampaignStudyKey(a.campaignName)));
+      return extra.length ? cached.concat(extra) : cached;
     },
 
     async fetchSendGridStats() {
@@ -1571,8 +1615,10 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
         'new proleeva campaign': 'Pain Relief: ProleevaMax',
         'proleeva - 2 - leads - instant forms': 'Pain Relief: ProleevaMax',
         'sleep peptide': 'Peptide Supplement: Sleep & Recovery',
+        'peptide supplement: sleep and recovery': 'Peptide Supplement: Sleep & Recovery',
         'rehydration recovery': 'Rehydration Recovery',
         'summer shred': 'Summer Shred',
+        'brain wellness: cognitive performance': 'Brain Wellness: Cognitive Performance',
       };
       const spendByStudy = {};
       adsBreakdown.forEach(ad => {
@@ -3109,13 +3155,17 @@ const API_KEY = 'X5luAfkKBfDdrF0ITHMmIuntpmDKp0W2xyoxlVpFqWc';
     'proleeva - 2 - leads - instant forms': 'Pain Relief: ProleevaMax',
     'new proleeva campaign': 'Pain Relief: ProleevaMax',
     'sleep peptide': 'Peptide Supplement: Sleep & Recovery',
+    'peptide supplement: sleep and recovery': 'Peptide Supplement: Sleep & Recovery',
     'rehydration recovery': 'Rehydration Recovery',
     'berkeley life': 'Nitrate Supplementation (Berkeley Life)',
     "rootless women's health": "Rootless & Women's Health",
+    "rootless & women's health": "Rootless & Women's Health",
     'coffee + oura ring study': 'Enhanced Brew — Coffee Study (Nov 2025)',
+    'enhanced brew - a coffee study': 'Enhanced Brew — Coffee Study (Nov 2025)',
     'enhanced brew formula': 'Enhanced Brew Formula — RCT (Jun 2025)',
     'caffeine study': 'Enhanced Brew Formula — RCT (Jun 2025)',
     'quantum upgrade': "Quantum Upgrade & Women's Health",
+    'brain wellness: cognitive performance': 'Brain Wellness: Cognitive Performance',
   };
   const studyLabel = name => CAMPAIGN_TO_STUDY_LABEL[(name || '').toLowerCase()] || name || '—';
   const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
