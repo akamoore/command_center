@@ -1799,6 +1799,32 @@
       "ctr": 2.72,
       "firstMonth": "2026-06",
       "lastMonth": "2026-07"
+    },
+    {
+      "adName": "Brain Wellness: Cognitive Performance",
+      "campaignName": "Brain Wellness: Cognitive Performance",
+      "impressions": 42296,
+      "clicks": 2613,
+      "spend": 1880.02,
+      "cpc": 0.72,
+      "cpm": 44.45,
+      "ctr": 6.18,
+      "firstMonth": "2026-09",
+      "lastMonth": "2026-10",
+      "source": "operations-api patch 2026-10-06 (Meta cron stale since Jul 15)"
+    },
+    {
+      "adName": "Brain Wellness: Cognitive Performance",
+      "campaignName": "Brain Wellness: Cognitive Performance",
+      "impressions": 5001,
+      "clicks": 257,
+      "spend": 213.25,
+      "cpc": 0.83,
+      "cpm": 42.64,
+      "ctr": 5.14,
+      "firstMonth": "2026-09",
+      "lastMonth": "2026-10",
+      "source": "operations-api patch 2026-10-06 (Meta cron stale since Jul 15)"
     }
   ]
 }
