@@ -81,6 +81,8 @@ const API_KEY     = '<operations API key — currently hardcoded here>';
 
 ## 5. Data sources
 
+> **Full API reference:** [`docs/recruiting-api.md`](./recruiting-api.md) documents every operations-API endpoint (`/api/recruiting`, `/api/public-studies`, `/api/surveys`, `/api/demographics`, `/api/wearable-cohorts`, `/api/participants/profiles`, `/api/study-membership`) with schemas, parameters, and field semantics.
+
 | Source | Feeds | Live path | Cached fallback |
 |--------|-------|-----------|-----------------|
 | Operations API | Funnel, studies, spend, onboarding, ManyChat subscriber counts | `/api/recruiting?days=N&scope=all` | `data/recruiting-stats.json` |
